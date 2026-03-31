@@ -11,7 +11,7 @@ import (
 
 var cdCmd = &cobra.Command{
 	Use:   "cd <name>",
-	Short: "Print the path of a repository (use with eval: eval $(ggg cd <name>))",
+	Short: "Print the path of a repository (use ggg shell-init for seamless cd)",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
@@ -33,7 +33,7 @@ var cdCmd = &cobra.Command{
 			return fmt.Errorf("repository is not cloned: %s", fullPath)
 		}
 
-		fmt.Printf("cd %s\n", fullPath)
+		fmt.Print(fullPath)
 		return nil
 	},
 }
