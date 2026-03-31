@@ -89,12 +89,10 @@ func IsDirty(repoPath string) (bool, error) {
 	return len(strings.TrimSpace(string(out))) > 0, nil
 }
 
-// Pull runs git pull in the given repo directory.
+// Pull runs git pull in the given repo directory (quiet mode).
 func Pull(repoPath string) error {
-	cmd := exec.Command("git", "pull")
+	cmd := exec.Command("git", "pull", "--quiet")
 	cmd.Dir = repoPath
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("git pull failed: %w", err)
 	}
