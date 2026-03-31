@@ -28,6 +28,15 @@ var cloneCmd = &cobra.Command{
 		}
 
 		repos := cfg.Repos
+		if len(args) == 0 {
+			fmt.Printf("Clone all %d repositories? [y/N] ", len(cfg.Repos))
+			reader := bufio.NewReader(os.Stdin)
+			input, _ := reader.ReadString('\n')
+			if strings.TrimSpace(strings.ToLower(input)) != "y" {
+				fmt.Println("Aborted.")
+				return nil
+			}
+		}
 		if len(args) > 0 {
 			filtered, err := filterRepo(cfg.Repos, args[0])
 			if err != nil {
