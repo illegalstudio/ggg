@@ -101,15 +101,13 @@ func Pull(repoPath string) error {
 	return nil
 }
 
-// Clone clones a git repository to the given path.
+// Clone clones a git repository to the given path (quiet mode, no stdout).
 func Clone(repoURL, destPath string) error {
 	if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
 		return fmt.Errorf("cannot create parent directory: %w", err)
 	}
 
-	cmd := exec.Command("git", "clone", repoURL, destPath)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd := exec.Command("git", "clone", "--quiet", repoURL, destPath)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("git clone failed: %w", err)
 	}

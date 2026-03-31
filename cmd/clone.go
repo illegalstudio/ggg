@@ -3,12 +3,14 @@ package cmd
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"go-git-get/config"
 	"go-git-get/repo"
 	"go-git-get/ui"
 
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/huh/spinner"
 	"github.com/spf13/cobra"
 )
 
@@ -49,23 +51,69 @@ var cloneCmd = &cobra.Command{
 			repos = filtered
 		}
 
+		// Separate already cloned from pending
+		type cloneJob struct {
+			repo     config.Repo
+			fullPath string
+		}
+		var jobs []cloneJob
 		for _, r := range repos {
 			fullPath, err := repo.FullPath(cfg.BaseDir, r)
 			if err != nil {
 				fmt.Println(ui.Error.Render(fmt.Sprintf("  ✗ Skipping %s: %v", r.URL, err)))
 				continue
 			}
-
 			if repo.IsCloned(fullPath) {
 				fmt.Printf("  %s %s\n", ui.Muted.Render("●"), ui.Muted.Render("Already cloned: "+fullPath))
 				continue
 			}
+			jobs = append(jobs, cloneJob{repo: r, fullPath: fullPath})
+		}
 
-			fmt.Printf("  %s %s → %s\n", ui.Info.Render("⬇"), ui.Repo.Render(r.URL), ui.Path.Render(fullPath))
-			if err := repo.Clone(r.URL, fullPath); err != nil {
-				fmt.Println(ui.Error.Render(fmt.Sprintf("  ✗ Error: %v", err)))
+		if len(jobs) == 0 {
+			return nil
+		}
+
+		// Clone in parallel with spinner
+		type result struct {
+			url  string
+			path string
+			err  error
+		}
+		results := make([]result, len(jobs))
+		var wg sync.WaitGroup
+
+		action := func() {
+			for i, j := range jobs {
+				wg.Add(1)
+				go func(idx int, job cloneJob) {
+					defer wg.Done()
+					results[idx] = result{
+						url:  job.repo.URL,
+						path: job.fullPath,
+						err:  repo.Clone(job.repo.URL, job.fullPath),
+					}
+				}(i, j)
+			}
+			wg.Wait()
+		}
+
+		title := fmt.Sprintf("Cloning %d repositories...", len(jobs))
+		if len(jobs) == 1 {
+			title = fmt.Sprintf("Cloning %s...", jobs[0].repo.URL)
+		}
+
+		if err := spinner.New().Title(title).Action(action).Run(); err != nil {
+			return err
+		}
+
+		// Print results
+		fmt.Println()
+		for _, r := range results {
+			if r.err != nil {
+				fmt.Printf("  %s %s %s\n", ui.Error.Render("✗"), ui.Repo.Render(r.url), ui.Error.Render(r.err.Error()))
 			} else {
-				fmt.Println(ui.Success.Render("  ✓ Done"))
+				fmt.Printf("  %s %s → %s\n", ui.Success.Render("✓"), ui.Repo.Render(r.url), ui.Path.Render(r.path))
 			}
 		}
 		return nil
