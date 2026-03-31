@@ -28,11 +28,18 @@ var cloneCmd = &cobra.Command{
 			return nil
 		}
 
-		repos := cfg.Repos
+		group, _ := cmd.Flags().GetString("group")
+		repos := filterByGroup(cfg.Repos, group)
+
+		if len(repos) == 0 {
+			fmt.Println(ui.Info.Render("No repositories match the criteria."))
+			return nil
+		}
+
 		if len(args) == 0 {
 			var confirm bool
 			err := huh.NewConfirm().
-				Title(fmt.Sprintf("Clone all %d repositories?", len(cfg.Repos))).
+				Title(fmt.Sprintf("Clone all %d repositories?", len(repos))).
 				Value(&confirm).
 				Run()
 			if err != nil {
@@ -168,5 +175,6 @@ func filterRepo(repos []config.Repo, name string) ([]config.Repo, error) {
 }
 
 func init() {
+	cloneCmd.Flags().StringP("group", "g", "", "Clone only repos in this group")
 	rootCmd.AddCommand(cloneCmd)
 }

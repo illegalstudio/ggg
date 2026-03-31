@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"go-git-get/config"
+
 	"github.com/spf13/cobra"
 )
 
@@ -17,4 +19,18 @@ func Execute() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
+}
+
+// filterByGroup filters repos by group if group is non-empty.
+func filterByGroup(repos []config.Repo, group string) []config.Repo {
+	if group == "" {
+		return repos
+	}
+	var filtered []config.Repo
+	for _, r := range repos {
+		if r.Group == group {
+			filtered = append(filtered, r)
+		}
+	}
+	return filtered
 }

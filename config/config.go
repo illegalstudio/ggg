@@ -10,8 +10,9 @@ import (
 )
 
 type Repo struct {
-	URL  string `mapstructure:"url" yaml:"url"`
-	Path string `mapstructure:"path" yaml:"path,omitempty"`
+	URL   string `mapstructure:"url" yaml:"url"`
+	Path  string `mapstructure:"path" yaml:"path,omitempty"`
+	Group string `mapstructure:"group" yaml:"group,omitempty"`
 }
 
 type Config struct {

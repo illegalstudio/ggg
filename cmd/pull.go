@@ -19,12 +19,14 @@ var pullCmd = &cobra.Command{
 			return err
 		}
 
-		if len(cfg.Repos) == 0 {
+		group, _ := cmd.Flags().GetString("group")
+		repos := filterByGroup(cfg.Repos, group)
+
+		if len(repos) == 0 {
 			fmt.Println(ui.Info.Render("No repositories configured."))
 			return nil
 		}
 
-		repos := cfg.Repos
 		if len(args) > 0 {
 			filtered, err := filterRepo(cfg.Repos, args[0])
 			if err != nil {
@@ -67,5 +69,6 @@ var pullCmd = &cobra.Command{
 }
 
 func init() {
+	pullCmd.Flags().StringP("group", "g", "", "Pull only repos in this group")
 	rootCmd.AddCommand(pullCmd)
 }

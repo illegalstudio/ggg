@@ -19,14 +19,17 @@ var listCmd = &cobra.Command{
 			return err
 		}
 
-		if len(cfg.Repos) == 0 {
+		group, _ := cmd.Flags().GetString("group")
+		repos := filterByGroup(cfg.Repos, group)
+
+		if len(repos) == 0 {
 			fmt.Println(ui.Info.Render("No repositories configured."))
 			return nil
 		}
 
 		fmt.Println(ui.Title.Render("Repositories"))
 		fmt.Println()
-		for _, r := range cfg.Repos {
+		for _, r := range repos {
 			fullPath, err := repo.FullPath(cfg.BaseDir, r)
 			if err != nil {
 				fmt.Printf("  %s %s\n", ui.Error.Render("✗"), ui.Error.Render(r.URL+" (invalid URL)"))
@@ -45,5 +48,6 @@ var listCmd = &cobra.Command{
 }
 
 func init() {
+	listCmd.Flags().StringP("group", "g", "", "List only repos in this group")
 	rootCmd.AddCommand(listCmd)
 }
