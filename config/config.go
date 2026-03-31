@@ -45,8 +45,15 @@ func Load() (*Config, error) {
 	// Expand ~ in base_dir
 	if cfg.BaseDir == "" {
 		cfg.BaseDir = filepath.Join(home, "Developer")
-	} else if cfg.BaseDir[:2] == "~/" {
+	} else if len(cfg.BaseDir) >= 2 && cfg.BaseDir[:2] == "~/" {
 		cfg.BaseDir = filepath.Join(home, cfg.BaseDir[2:])
+	}
+
+	// Validate repos
+	for i, r := range cfg.Repos {
+		if r.URL == "" {
+			return nil, fmt.Errorf("repo #%d has no URL", i+1)
+		}
 	}
 
 	return &cfg, nil
