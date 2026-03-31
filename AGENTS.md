@@ -46,17 +46,34 @@ ui/              → Shared lipgloss styles for terminal output
   - `cmd/`: filterRepo (exact, partial, case-insensitive), filterByGroup, findRepoIndex
 - **Convention**: Use table-driven tests for functions with multiple input/output cases; use `t.TempDir()` for filesystem tests
 
+## Documentation
+
+User-facing documentation lives in `doc/`:
+
+- `doc/configuration.md` — Full configuration reference (fields, pull strategy, examples)
+- `doc/commands.md` — All CLI commands with usage, flags, and examples
+- `doc/groups.md` — How groups work and filtering with `--group/-g`
+- `doc/shell-integration.md` — Shell integration with `ggg cd`
+
+**Documentation must always be kept up to date.** When adding or modifying commands, config fields, or behavior:
+1. Update the relevant `doc/` file(s)
+2. Update `README.md` if the commands table or quick start section is affected
+3. Update this `AGENTS.md` if architecture, coding style, or conventions change
+
 ## Configuration
 
 Config file location: `~/.config/ggg/repositories.yaml`
 
 ```yaml
 base_dir: ~/Developer
+pull_strategy: rebase  # optional: merge (default), rebase, ff-only
+
 repos:
   - url: git@github.com:user/repo.git
   - url: https://github.com/org/project.git
-    path: custom/path     # optional
-    group: work           # optional
+    path: custom/path          # optional
+    group: work                # optional
+    pull_strategy: ff-only     # optional, overrides global
 ```
 
 ## Build

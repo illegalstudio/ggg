@@ -35,36 +35,31 @@ ggg clone github.com/user/repo
 ggg list
 ```
 
-## Configuration
-
-The configuration file is located at `~/.config/ggg/repositories.yaml`.
-
-```yaml
-# Base directory for all cloned repositories
-base_dir: ~/Developer
-
-repos:
-  - url: git@github.com:user/repo.git
-  - url: https://github.com/org/project.git
-    path: custom/path  # optional, derived from URL if omitted
-```
-
-### Fields
-
-| Field | Description | Required |
-|-------|-------------|----------|
-| `base_dir` | Root directory for clones. Defaults to `~/Developer` | No |
-| `repos[].url` | Git repository URL (SSH or HTTPS) | Yes |
-| `repos[].path` | Custom clone path relative to `base_dir`. If omitted, derived from the URL (e.g. `github.com/user/repo`) | No |
-
 ## Commands
 
 | Command | Description |
 |---------|-------------|
 | `ggg init` | Generate a default configuration file |
 | `ggg list` | List configured repositories and their clone status |
-| `ggg clone` | Clone all configured repositories |
-| `ggg clone <name>` | Clone a specific repository (by URL, path, or derived name) |
+| `ggg clone [name]` | Clone repositories (all or a specific one) |
+| `ggg pull [name]` | Pull latest changes (only if repo is clean) |
+| `ggg status` | Show branch, dirty/clean, ahead/behind for all repos |
+| `ggg add <url>` | Add a repository to the configuration |
+| `ggg remove <name>` | Remove a repository from the configuration |
+| `ggg cd <name>` | Shell integration — `eval $(ggg cd <name>)` |
+| `ggg doctor` | Run health checks on config and repositories |
+| `ggg outdated` | Show repositories that are behind their remote |
+
+Most commands support `--group/-g` to filter by group.
+
+## Documentation
+
+Full documentation is available in the [`doc/`](doc/) directory:
+
+- [Configuration Reference](doc/configuration.md)
+- [Commands](doc/commands.md)
+- [Groups](doc/groups.md)
+- [Shell Integration](doc/shell-integration.md)
 
 ## License
 
