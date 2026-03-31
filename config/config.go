@@ -9,15 +9,41 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// PullStrategy defines how `git pull` behaves.
+// Valid values: "merge" (default), "rebase", "ff-only".
+type PullStrategy string
+
+const (
+	PullMerge  PullStrategy = "merge"
+	PullRebase PullStrategy = "rebase"
+	PullFFOnly PullStrategy = "ff-only"
+)
+
+const DefaultPullStrategy = PullMerge
+
 type Repo struct {
-	URL   string `mapstructure:"url" yaml:"url"`
-	Path  string `mapstructure:"path" yaml:"path,omitempty"`
-	Group string `mapstructure:"group" yaml:"group,omitempty"`
+	URL          string       `mapstructure:"url" yaml:"url"`
+	Path         string       `mapstructure:"path" yaml:"path,omitempty"`
+	Group        string       `mapstructure:"group" yaml:"group,omitempty"`
+	PullStrategy PullStrategy `mapstructure:"pull_strategy" yaml:"pull_strategy,omitempty"`
 }
 
 type Config struct {
-	BaseDir string `mapstructure:"base_dir" yaml:"base_dir"`
-	Repos   []Repo `mapstructure:"repos" yaml:"repos"`
+	BaseDir      string       `mapstructure:"base_dir" yaml:"base_dir"`
+	PullStrategy PullStrategy `mapstructure:"pull_strategy" yaml:"pull_strategy,omitempty"`
+	Repos        []Repo       `mapstructure:"repos" yaml:"repos"`
+}
+
+// ResolvePullStrategy returns the effective pull strategy for a repo:
+// repo-level > global > default (merge).
+func (c *Config) ResolvePullStrategy(r Repo) PullStrategy {
+	if r.PullStrategy != "" {
+		return r.PullStrategy
+	}
+	if c.PullStrategy != "" {
+		return c.PullStrategy
+	}
+	return DefaultPullStrategy
 }
 
 func ConfigPath() string {
@@ -89,9 +115,13 @@ func WriteDefault(path string) error {
 	content := `# GGG Configuration
 base_dir: ~/Developer
 
+# Default pull strategy for all repos: merge, rebase, ff-only
+# pull_strategy: merge
+
 repos:
   - url: git@github.com:user/repo.git
-  # path: custom/path  # optional, derived from URL if omitted
+  # path: custom/path           # optional, derived from URL if omitted
+  # pull_strategy: rebase       # optional, overrides global strategy
 `
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {

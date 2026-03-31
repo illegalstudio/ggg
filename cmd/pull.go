@@ -40,6 +40,7 @@ var pullCmd = &cobra.Command{
 		type pullJob struct {
 			repo     config.Repo
 			fullPath string
+			strategy string
 		}
 		type result struct {
 			url    string
@@ -69,7 +70,8 @@ var pullCmd = &cobra.Command{
 				skipped = append(skipped, result{url: r.URL, status: "dirty"})
 				continue
 			}
-			jobs = append(jobs, pullJob{repo: r, fullPath: fullPath})
+			strategy := string(cfg.ResolvePullStrategy(r))
+			jobs = append(jobs, pullJob{repo: r, fullPath: fullPath, strategy: strategy})
 		}
 
 		// Print skipped repos
@@ -97,7 +99,7 @@ var pullCmd = &cobra.Command{
 				wg.Add(1)
 				go func(idx int, job pullJob) {
 					defer wg.Done()
-					err := repo.Pull(job.fullPath)
+					err := repo.Pull(job.fullPath, job.strategy)
 					results[idx] = result{url: job.repo.URL, status: "pulled", err: err}
 				}(i, j)
 			}

@@ -89,9 +89,18 @@ func IsDirty(repoPath string) (bool, error) {
 	return len(strings.TrimSpace(string(out))) > 0, nil
 }
 
-// Pull runs git pull in the given repo directory (quiet mode).
-func Pull(repoPath string) error {
-	cmd := exec.Command("git", "pull", "--quiet")
+// Pull runs git pull in the given repo directory with the specified strategy.
+// Valid strategies: "merge", "rebase", "ff-only".
+func Pull(repoPath string, strategy string) error {
+	args := []string{"pull", "--quiet"}
+	switch strategy {
+	case "rebase":
+		args = append(args, "--rebase")
+	case "ff-only":
+		args = append(args, "--ff-only")
+	}
+
+	cmd := exec.Command("git", args...)
 	cmd.Dir = repoPath
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("git pull failed: %w", err)

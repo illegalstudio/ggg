@@ -135,6 +135,38 @@ func TestSave_MarshalRoundtrip(t *testing.T) {
 	}
 }
 
+func TestResolvePullStrategy_Default(t *testing.T) {
+	cfg := &Config{}
+	r := Repo{URL: "git@github.com:user/repo.git"}
+	if got := cfg.ResolvePullStrategy(r); got != PullMerge {
+		t.Errorf("expected %q, got %q", PullMerge, got)
+	}
+}
+
+func TestResolvePullStrategy_Global(t *testing.T) {
+	cfg := &Config{PullStrategy: PullRebase}
+	r := Repo{URL: "git@github.com:user/repo.git"}
+	if got := cfg.ResolvePullStrategy(r); got != PullRebase {
+		t.Errorf("expected %q, got %q", PullRebase, got)
+	}
+}
+
+func TestResolvePullStrategy_RepoOverridesGlobal(t *testing.T) {
+	cfg := &Config{PullStrategy: PullRebase}
+	r := Repo{URL: "git@github.com:user/repo.git", PullStrategy: PullFFOnly}
+	if got := cfg.ResolvePullStrategy(r); got != PullFFOnly {
+		t.Errorf("expected %q, got %q", PullFFOnly, got)
+	}
+}
+
+func TestResolvePullStrategy_RepoWithoutGlobal(t *testing.T) {
+	cfg := &Config{}
+	r := Repo{URL: "git@github.com:user/repo.git", PullStrategy: PullRebase}
+	if got := cfg.ResolvePullStrategy(r); got != PullRebase {
+		t.Errorf("expected %q, got %q", PullRebase, got)
+	}
+}
+
 func TestWriteDefault_Idempotent(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "ggg", "repositories.yaml")
