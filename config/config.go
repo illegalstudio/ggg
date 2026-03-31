@@ -20,19 +20,18 @@ type Config struct {
 
 func ConfigPath() string {
 	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".config", "ggg.yaml")
+	return filepath.Join(home, ".config", "ggg", "repositories.yaml")
 }
 
 func Load() (*Config, error) {
-	viper.SetConfigName("ggg")
+	viper.SetConfigName("repositories")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath(filepath.Join("$HOME", ".config"))
 
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil, fmt.Errorf("cannot determine home directory: %w", err)
 	}
-	viper.AddConfigPath(filepath.Join(home, ".config"))
+	viper.AddConfigPath(filepath.Join(home, ".config", "ggg"))
 
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("cannot read config file: %w", err)
