@@ -26,8 +26,8 @@
 
 ## v1.1.0
 
-- [ ] Comando `ggg doctor` — health check: config valida, repo orfani, remote raggiungibili
-- [ ] Comando `ggg outdated` — mostra i repo behind rispetto al remote
+- [x] Comando `ggg doctor` — health check: config valida, repo orfani, remote raggiungibili
+- [x] Comando `ggg outdated` — mostra i repo behind rispetto al remote
 - [ ] Comando `ggg open <name>` — apre il repo nel browser o nell'editor
 - [ ] Comando `ggg exec <command>` — esegue un comando in tutti i repo
 - [ ] Comando `ggg sync` — clona i mancanti + pull i puliti in un solo comando
