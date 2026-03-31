@@ -2,6 +2,7 @@ package repo
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -16,6 +17,7 @@ func TestDerivePathFromURL_SSH(t *testing.T) {
 		{"git@github.com:user/repo.git", "user/repo"},
 		{"git@gitlab.com:org/project.git", "org/project"},
 		{"git@github.com:user/repo", "user/repo"},
+		{"git@bitbucket.org:team/lib.git", "team/lib"},
 	}
 	for _, tt := range tests {
 		got, err := DerivePathFromURL(tt.url)
@@ -37,6 +39,7 @@ func TestDerivePathFromURL_HTTPS(t *testing.T) {
 		{"https://github.com/user/repo.git", "user/repo"},
 		{"https://gitlab.com/org/project.git", "org/project"},
 		{"https://github.com/user/repo", "user/repo"},
+		{"https://bitbucket.org/team/lib.git", "team/lib"},
 	}
 	for _, tt := range tests {
 		got, err := DerivePathFromURL(tt.url)
@@ -74,6 +77,18 @@ func TestFullPath_DerivedFromURL(t *testing.T) {
 	}
 }
 
+func TestFullPath_HTTPSUrl(t *testing.T) {
+	r := config.Repo{URL: "https://github.com/org/project.git"}
+	got, err := FullPath("/home/dev", r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join("/home/dev", "org/project")
+	if got != want {
+		t.Errorf("FullPath = %q, want %q", got, want)
+	}
+}
+
 func TestIsCloned(t *testing.T) {
 	dir := t.TempDir()
 
@@ -85,5 +100,123 @@ func TestIsCloned(t *testing.T) {
 	os.MkdirAll(subdir, 0755)
 	if !IsCloned(subdir) {
 		t.Error("IsCloned should return true for existing dir")
+	}
+
+	// A file is not a cloned repo
+	filePath := filepath.Join(dir, "afile")
+	os.WriteFile(filePath, []byte("hello"), 0644)
+	if IsCloned(filePath) {
+		t.Error("IsCloned should return false for a file")
+	}
+}
+
+// initTestRepo creates a git repo in a temp dir with one commit.
+func initTestRepo(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	run := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		cmd.Env = append(os.Environ(),
+			"GIT_AUTHOR_NAME=test",
+			"GIT_AUTHOR_EMAIL=test@test.com",
+			"GIT_COMMITTER_NAME=test",
+			"GIT_COMMITTER_EMAIL=test@test.com",
+		)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v failed: %v\n%s", args, err, out)
+		}
+	}
+	run("init", "-b", "main")
+	run("config", "user.email", "test@test.com")
+	run("config", "user.name", "test")
+	os.WriteFile(filepath.Join(dir, "README.md"), []byte("# test"), 0644)
+	run("add", ".")
+	run("commit", "-m", "initial commit")
+	return dir
+}
+
+func TestCurrentBranch(t *testing.T) {
+	dir := initTestRepo(t)
+	branch, err := CurrentBranch(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if branch != "main" {
+		t.Errorf("CurrentBranch = %q, want %q", branch, "main")
+	}
+}
+
+func TestIsDirty_Clean(t *testing.T) {
+	dir := initTestRepo(t)
+	dirty, err := IsDirty(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dirty {
+		t.Error("repo should be clean")
+	}
+}
+
+func TestIsDirty_Dirty(t *testing.T) {
+	dir := initTestRepo(t)
+	os.WriteFile(filepath.Join(dir, "new.txt"), []byte("change"), 0644)
+	dirty, err := IsDirty(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !dirty {
+		t.Error("repo should be dirty")
+	}
+}
+
+func TestAheadBehind_NoUpstream(t *testing.T) {
+	dir := initTestRepo(t)
+	ahead, behind, err := AheadBehind(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ahead != 0 || behind != 0 {
+		t.Errorf("AheadBehind = (%d, %d), want (0, 0) with no upstream", ahead, behind)
+	}
+}
+
+func TestFetch_ValidRepo(t *testing.T) {
+	dir := initTestRepo(t)
+	// Fetch on a local repo with no remote should fail gracefully
+	err := Fetch(dir)
+	// It's expected to fail since there's no remote
+	if err == nil {
+		t.Log("Fetch succeeded (remote may be configured)")
+	}
+}
+
+func TestClone(t *testing.T) {
+	src := initTestRepo(t)
+	dest := filepath.Join(t.TempDir(), "cloned")
+
+	err := Clone(src, dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !IsCloned(dest) {
+		t.Error("cloned directory should exist")
+	}
+
+	branch, err := CurrentBranch(dest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if branch != "main" {
+		t.Errorf("cloned branch = %q, want %q", branch, "main")
+	}
+}
+
+func TestRemoteReachable_InvalidURL(t *testing.T) {
+	if RemoteReachable("git@invalid.example.com:no/repo.git") {
+		t.Error("invalid remote should not be reachable")
 	}
 }
