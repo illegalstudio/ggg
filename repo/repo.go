@@ -54,6 +54,29 @@ func IsCloned(path string) bool {
 	return err == nil && info.IsDir()
 }
 
+// IsDirty checks if a repo has uncommitted changes.
+func IsDirty(repoPath string) (bool, error) {
+	cmd := exec.Command("git", "status", "--porcelain")
+	cmd.Dir = repoPath
+	out, err := cmd.Output()
+	if err != nil {
+		return false, fmt.Errorf("git status failed: %w", err)
+	}
+	return len(strings.TrimSpace(string(out))) > 0, nil
+}
+
+// Pull runs git pull in the given repo directory.
+func Pull(repoPath string) error {
+	cmd := exec.Command("git", "pull")
+	cmd.Dir = repoPath
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("git pull failed: %w", err)
+	}
+	return nil
+}
+
 // Clone clones a git repository to the given path.
 func Clone(repoURL, destPath string) error {
 	if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
