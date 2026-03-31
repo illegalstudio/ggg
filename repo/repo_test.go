@@ -13,9 +13,9 @@ func TestDerivePathFromURL_SSH(t *testing.T) {
 		url  string
 		want string
 	}{
-		{"git@github.com:user/repo.git", "github.com/user/repo"},
-		{"git@gitlab.com:org/project.git", "gitlab.com/org/project"},
-		{"git@github.com:user/repo", "github.com/user/repo"},
+		{"git@github.com:user/repo.git", "user/repo"},
+		{"git@gitlab.com:org/project.git", "org/project"},
+		{"git@github.com:user/repo", "user/repo"},
 	}
 	for _, tt := range tests {
 		got, err := DerivePathFromURL(tt.url)
@@ -34,9 +34,9 @@ func TestDerivePathFromURL_HTTPS(t *testing.T) {
 		url  string
 		want string
 	}{
-		{"https://github.com/user/repo.git", "github.com/user/repo"},
-		{"https://gitlab.com/org/project.git", "gitlab.com/org/project"},
-		{"https://github.com/user/repo", "github.com/user/repo"},
+		{"https://github.com/user/repo.git", "user/repo"},
+		{"https://gitlab.com/org/project.git", "org/project"},
+		{"https://github.com/user/repo", "user/repo"},
 	}
 	for _, tt := range tests {
 		got, err := DerivePathFromURL(tt.url)
@@ -68,7 +68,7 @@ func TestFullPath_DerivedFromURL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := filepath.Join("/base", "github.com/user/repo")
+	want := filepath.Join("/base", "user/repo")
 	if got != want {
 		t.Errorf("FullPath = %q, want %q", got, want)
 	}

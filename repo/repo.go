@@ -19,9 +19,11 @@ func DerivePathFromURL(rawURL string) (string, error) {
 	if strings.Contains(rawURL, "@") && strings.Contains(rawURL, ":") && !strings.Contains(rawURL, "://") {
 		parts := strings.SplitN(rawURL, "@", 2)
 		hostAndPath := parts[1]
-		hostAndPath = strings.Replace(hostAndPath, ":", "/", 1)
-		hostAndPath = strings.TrimSuffix(hostAndPath, ".git")
-		return hostAndPath, nil
+		// Extract only the path after the host (user/repo)
+		colonIdx := strings.Index(hostAndPath, ":")
+		path := hostAndPath[colonIdx+1:]
+		path = strings.TrimSuffix(path, ".git")
+		return path, nil
 	}
 
 	// Handle HTTPS-style URLs
@@ -29,7 +31,8 @@ func DerivePathFromURL(rawURL string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("invalid URL %q: %w", rawURL, err)
 	}
-	path := strings.TrimSuffix(parsed.Host+parsed.Path, ".git")
+	path := strings.TrimPrefix(parsed.Path, "/")
+	path = strings.TrimSuffix(path, ".git")
 	return path, nil
 }
 
