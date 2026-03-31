@@ -99,6 +99,16 @@ func Pull(repoPath string) error {
 	return nil
 }
 
+// Fetch runs git fetch in the given repo directory.
+func Fetch(repoPath string) error {
+	cmd := exec.Command("git", "fetch", "--quiet")
+	cmd.Dir = repoPath
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("git fetch failed: %w", err)
+	}
+	return nil
+}
+
 // RemoteReachable checks if the git remote is reachable.
 func RemoteReachable(repoURL string) bool {
 	cmd := exec.Command("git", "ls-remote", "--exit-code", "--quiet", repoURL)
