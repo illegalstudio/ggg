@@ -54,6 +54,30 @@ func IsCloned(path string) bool {
 	return err == nil && info.IsDir()
 }
 
+// CurrentBranch returns the current branch name.
+func CurrentBranch(repoPath string) (string, error) {
+	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
+	cmd.Dir = repoPath
+	out, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("git rev-parse failed: %w", err)
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+// AheadBehind returns how many commits ahead/behind the tracking branch.
+func AheadBehind(repoPath string) (int, int, error) {
+	cmd := exec.Command("git", "rev-list", "--left-right", "--count", "HEAD...@{upstream}")
+	cmd.Dir = repoPath
+	out, err := cmd.Output()
+	if err != nil {
+		return 0, 0, nil // no upstream configured
+	}
+	var ahead, behind int
+	fmt.Sscanf(strings.TrimSpace(string(out)), "%d\t%d", &ahead, &behind)
+	return ahead, behind, nil
+}
+
 // IsDirty checks if a repo has uncommitted changes.
 func IsDirty(repoPath string) (bool, error) {
 	cmd := exec.Command("git", "status", "--porcelain")
