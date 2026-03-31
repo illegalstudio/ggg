@@ -1,7 +1,11 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
 
 	"go-git-get/config"
 	"go-git-get/repo"
@@ -54,13 +58,52 @@ var cloneCmd = &cobra.Command{
 }
 
 func filterRepo(repos []config.Repo, name string) ([]config.Repo, error) {
+	// First pass: exact match
 	for _, r := range repos {
 		derived, _ := repo.DerivePathFromURL(r.URL)
 		if r.Path == name || r.URL == name || derived == name {
 			return []config.Repo{r}, nil
 		}
 	}
-	return nil, fmt.Errorf("repository %q not found in config", name)
+
+	// Second pass: partial match (substring, case-insensitive)
+	nameLower := strings.ToLower(name)
+	var matches []config.Repo
+	for _, r := range repos {
+		derived, _ := repo.DerivePathFromURL(r.URL)
+		if strings.Contains(strings.ToLower(r.URL), nameLower) ||
+			strings.Contains(strings.ToLower(r.Path), nameLower) ||
+			strings.Contains(strings.ToLower(derived), nameLower) {
+			matches = append(matches, r)
+		}
+	}
+
+	if len(matches) == 0 {
+		return nil, fmt.Errorf("repository %q not found in config", name)
+	}
+	if len(matches) == 1 {
+		return matches, nil
+	}
+
+	// Multiple matches: prompt user to choose
+	fmt.Printf("Multiple repositories match %q:\n", name)
+	for i, r := range matches {
+		fmt.Printf("  %d) %s\n", i+1, r.URL)
+	}
+	fmt.Print("Choose a number: ")
+
+	reader := bufio.NewReader(os.Stdin)
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		return nil, fmt.Errorf("failed to read input: %w", err)
+	}
+
+	choice, err := strconv.Atoi(strings.TrimSpace(input))
+	if err != nil || choice < 1 || choice > len(matches) {
+		return nil, fmt.Errorf("invalid choice")
+	}
+
+	return []config.Repo{matches[choice-1]}, nil
 }
 
 func init() {
