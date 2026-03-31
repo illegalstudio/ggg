@@ -99,6 +99,12 @@ func Pull(repoPath string) error {
 	return nil
 }
 
+// RemoteReachable checks if the git remote is reachable.
+func RemoteReachable(repoURL string) bool {
+	cmd := exec.Command("git", "ls-remote", "--exit-code", "--quiet", repoURL)
+	return cmd.Run() == nil
+}
+
 // Clone clones a git repository to the given path (quiet mode, no stdout).
 func Clone(repoURL, destPath string) error {
 	if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
