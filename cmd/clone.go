@@ -1,15 +1,14 @@
 package cmd
 
 import (
-	"bufio"
 	"fmt"
-	"os"
-	"strconv"
 	"strings"
 
 	"go-git-get/config"
 	"go-git-get/repo"
+	"go-git-get/ui"
 
+	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
 )
 
@@ -23,17 +22,22 @@ var cloneCmd = &cobra.Command{
 		}
 
 		if len(cfg.Repos) == 0 {
-			fmt.Println("No repositories configured.")
+			fmt.Println(ui.Info.Render("No repositories configured."))
 			return nil
 		}
 
 		repos := cfg.Repos
 		if len(args) == 0 {
-			fmt.Printf("Clone all %d repositories? [y/N] ", len(cfg.Repos))
-			reader := bufio.NewReader(os.Stdin)
-			input, _ := reader.ReadString('\n')
-			if strings.TrimSpace(strings.ToLower(input)) != "y" {
-				fmt.Println("Aborted.")
+			var confirm bool
+			err := huh.NewConfirm().
+				Title(fmt.Sprintf("Clone all %d repositories?", len(cfg.Repos))).
+				Value(&confirm).
+				Run()
+			if err != nil {
+				return err
+			}
+			if !confirm {
+				fmt.Println(ui.Muted.Render("Aborted."))
 				return nil
 			}
 		}
@@ -48,18 +52,20 @@ var cloneCmd = &cobra.Command{
 		for _, r := range repos {
 			fullPath, err := repo.FullPath(cfg.BaseDir, r)
 			if err != nil {
-				fmt.Printf("Skipping %s: %v\n", r.URL, err)
+				fmt.Println(ui.Error.Render(fmt.Sprintf("  ✗ Skipping %s: %v", r.URL, err)))
 				continue
 			}
 
 			if repo.IsCloned(fullPath) {
-				fmt.Printf("Already cloned: %s\n", fullPath)
+				fmt.Printf("  %s %s\n", ui.Muted.Render("●"), ui.Muted.Render("Already cloned: "+fullPath))
 				continue
 			}
 
-			fmt.Printf("Cloning %s → %s\n", r.URL, fullPath)
+			fmt.Printf("  %s %s → %s\n", ui.Info.Render("⬇"), ui.Repo.Render(r.URL), ui.Path.Render(fullPath))
 			if err := repo.Clone(r.URL, fullPath); err != nil {
-				fmt.Printf("Error cloning %s: %v\n", r.URL, err)
+				fmt.Println(ui.Error.Render(fmt.Sprintf("  ✗ Error: %v", err)))
+			} else {
+				fmt.Println(ui.Success.Render("  ✓ Done"))
 			}
 		}
 		return nil
@@ -94,25 +100,23 @@ func filterRepo(repos []config.Repo, name string) ([]config.Repo, error) {
 		return matches, nil
 	}
 
-	// Multiple matches: prompt user to choose
-	fmt.Printf("Multiple repositories match %q:\n", name)
+	// Multiple matches: prompt user to choose via huh select
+	options := make([]huh.Option[int], len(matches))
 	for i, r := range matches {
-		fmt.Printf("  %d) %s\n", i+1, r.URL)
+		options[i] = huh.NewOption(r.URL, i)
 	}
-	fmt.Print("Choose a number: ")
 
-	reader := bufio.NewReader(os.Stdin)
-	input, err := reader.ReadString('\n')
+	var choice int
+	err := huh.NewSelect[int]().
+		Title(fmt.Sprintf("Multiple repositories match %q", name)).
+		Options(options...).
+		Value(&choice).
+		Run()
 	if err != nil {
-		return nil, fmt.Errorf("failed to read input: %w", err)
+		return nil, err
 	}
 
-	choice, err := strconv.Atoi(strings.TrimSpace(input))
-	if err != nil || choice < 1 || choice > len(matches) {
-		return nil, fmt.Errorf("invalid choice")
-	}
-
-	return []config.Repo{matches[choice-1]}, nil
+	return []config.Repo{matches[choice]}, nil
 }
 
 func init() {

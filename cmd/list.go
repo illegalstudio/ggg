@@ -5,6 +5,7 @@ import (
 
 	"go-git-get/config"
 	"go-git-get/repo"
+	"go-git-get/ui"
 
 	"github.com/spf13/cobra"
 )
@@ -19,23 +20,26 @@ var listCmd = &cobra.Command{
 		}
 
 		if len(cfg.Repos) == 0 {
-			fmt.Println("No repositories configured.")
+			fmt.Println(ui.Info.Render("No repositories configured."))
 			return nil
 		}
 
+		fmt.Println(ui.Title.Render("Repositories"))
+		fmt.Println()
 		for _, r := range cfg.Repos {
 			fullPath, err := repo.FullPath(cfg.BaseDir, r)
 			if err != nil {
-				fmt.Printf("  ✗ %s (invalid URL)\n", r.URL)
+				fmt.Printf("  %s %s\n", ui.Error.Render("✗"), ui.Error.Render(r.URL+" (invalid URL)"))
 				continue
 			}
 
-			status := "✗ not cloned"
 			if repo.IsCloned(fullPath) {
-				status = "✓ cloned"
+				fmt.Printf("  %s %s → %s\n", ui.Success.Render("✓"), ui.Repo.Render(r.URL), ui.Path.Render(fullPath))
+			} else {
+				fmt.Printf("  %s %s → %s\n", ui.Muted.Render("○"), ui.Repo.Render(r.URL), ui.Path.Render(fullPath))
 			}
-			fmt.Printf("  %s  %s → %s\n", status, r.URL, fullPath)
 		}
+		fmt.Println()
 		return nil
 	},
 }

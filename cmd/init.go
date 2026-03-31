@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"go-git-get/config"
+	"go-git-get/ui"
 
 	"github.com/spf13/cobra"
 )
@@ -23,7 +24,7 @@ var initCmd = &cobra.Command{
 			return err
 		}
 
-		fmt.Println("Config file created at", path)
+		fmt.Println(ui.Success.Render("✓") + " Config file created at " + ui.Path.Render(path))
 		return nil
 	},
 }
