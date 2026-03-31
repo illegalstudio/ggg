@@ -6,16 +6,17 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v3"
 )
 
 type Repo struct {
-	URL  string `mapstructure:"url"`
-	Path string `mapstructure:"path"`
+	URL  string `mapstructure:"url" yaml:"url"`
+	Path string `mapstructure:"path" yaml:"path,omitempty"`
 }
 
 type Config struct {
-	BaseDir string `mapstructure:"base_dir"`
-	Repos   []Repo `mapstructure:"repos"`
+	BaseDir string `mapstructure:"base_dir" yaml:"base_dir"`
+	Repos   []Repo `mapstructure:"repos" yaml:"repos"`
 }
 
 func ConfigPath() string {
@@ -57,6 +58,30 @@ func Load() (*Config, error) {
 	}
 
 	return &cfg, nil
+}
+
+// LoadRaw reads the config file without expanding paths.
+func LoadRaw() (*Config, error) {
+	path := ConfigPath()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read config file: %w", err)
+	}
+	var cfg Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("cannot parse config file: %w", err)
+	}
+	return &cfg, nil
+}
+
+// Save writes the config to the config file.
+func Save(cfg *Config) error {
+	path := ConfigPath()
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		return fmt.Errorf("cannot serialize config: %w", err)
+	}
+	return os.WriteFile(path, data, 0644)
 }
 
 func WriteDefault(path string) error {
