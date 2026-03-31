@@ -10,8 +10,8 @@
 - [x] Comando `ggg clone <name>` — clona un singolo repository
 - [x] Derivazione automatica del path di destinazione dall'URL del repo (es. `github.com/user/repo`)
 - [x] Supporto `base_dir` nella configurazione per la directory radice dei clone
-- [ ] Gestione errori (repo già clonato, URL non valido, directory non scrivibile)
-- [ ] Aggiungere test unitari
-- [ ] Completare il README con istruzioni di installazione, utilizzo ed esempi
+- [x] Gestione errori (repo già clonato, URL non valido, directory non scrivibile)
+- [x] Aggiungere test unitari
+- [x] Completare il README con istruzioni di installazione, utilizzo ed esempi
 - [ ] Build cross-platform (Linux, macOS, Windows)
 - [ ] Prima release su GitHub con binari precompilati
