@@ -182,32 +182,8 @@ func fetchRepos(org string) ([]ghRepo, error) {
 }
 
 func selectRepos(repos []ghRepo) ([]ghRepo, error) {
-	var filter string
-	err := huh.NewInput().
-		Title(fmt.Sprintf("Filter repositories (%d found, leave empty to show all)", len(repos))).
-		Value(&filter).
-		Run()
-	if err != nil {
-		return nil, err
-	}
-
-	filtered := repos
-	if filter != "" {
-		filterLower := strings.ToLower(filter)
-		filtered = nil
-		for _, r := range repos {
-			if strings.Contains(strings.ToLower(r.FullName), filterLower) {
-				filtered = append(filtered, r)
-			}
-		}
-		if len(filtered) == 0 {
-			fmt.Println(ui.Info.Render(fmt.Sprintf("No repositories match %q.", filter)))
-			return nil, nil
-		}
-	}
-
-	options := make([]huh.Option[int], len(filtered))
-	for i, r := range filtered {
+	options := make([]huh.Option[int], len(repos))
+	for i, r := range repos {
 		label := r.FullName
 		if r.Private {
 			label += " 🔒"
@@ -216,9 +192,11 @@ func selectRepos(repos []ghRepo) ([]ghRepo, error) {
 	}
 
 	var selected []int
-	err = huh.NewMultiSelect[int]().
-		Title("Select repositories to import (space to toggle, ctrl+a to toggle all)").
+	err := huh.NewMultiSelect[int]().
+		Title("Select repositories to import").
+		Description("/ filter · x toggle · ctrl+a all · enter confirm").
 		Options(options...).
+		Filterable(true).
 		Height(20).
 		Value(&selected).
 		Run()
@@ -228,7 +206,7 @@ func selectRepos(repos []ghRepo) ([]ghRepo, error) {
 
 	result := make([]ghRepo, len(selected))
 	for i, idx := range selected {
-		result[i] = filtered[idx]
+		result[i] = repos[idx]
 	}
 	return result, nil
 }
