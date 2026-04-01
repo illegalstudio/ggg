@@ -28,25 +28,26 @@
 
 - [x] Comando `ggg doctor` — health check: config valida, repo orfani, remote raggiungibili
 - [x] Comando `ggg outdated` — mostra i repo behind rispetto al remote
-- [ ] Comando `ggg open <name>` — apre il repo nel browser o nell'editor
+- [x] Comando `ggg open <name> [editor]` — apre il repo nell'editor (default: $EDITOR)
+- [x] Comando `ggg browse <name>` — apre il repo nel browser
 - [ ] Comando `ggg exec <command>` — esegue un comando in tutti i repo
 - [ ] Comando `ggg sync` — clona i mancanti + pull i puliti in un solo comando
 - [ ] Comando `ggg import` — importa repo da GitHub/GitLab via API
 - [ ] Comando `ggg export` — esporta la config in formato condivisibile
-- [ ] Shell alias — function shell che gestisce `cd` nativamente senza `eval`
+- [x] Shell alias — `gcd` function shell per navigare senza `eval`
 - [ ] Completions dinamiche — autocompletamento nomi repo per bash/zsh/fish
 - [ ] Config watch — flag `--watch` su status con refresh periodico
 - [ ] Notifiche dirty — integrazione con prompt shell (starship/p10k)
 
 ## v1.2.0
 
-- [ ] Comando `ggg add <url> --clone` — aggiunge e clona in un colpo solo
-- [ ] Comando `ggg add <url> --group <name>` — specificare gruppo e path da CLI
+- [x] Comando `ggg add <url> --clone` — aggiunge e clona in un colpo solo
+- [x] Comando `ggg add <url> --group <name>` — specificare gruppo e path da CLI
 - [ ] Comando `ggg list --groups` — mostra i gruppi disponibili
 - [ ] Comando `ggg rename <old> <new>` — rinomina il path/alias di un repo
-- [ ] Comando `ggg stash` — esegue `git stash` su tutti i repo dirty
+- [x] Comando `ggg stash [name]` — esegue `git stash` su tutti i repo dirty
 - [ ] Comando `ggg branch [name]` — mostra o filtra i repo per branch corrente
-- [ ] Comando `ggg checkout <branch>` — checkout di un branch su tutti i repo
+- [x] Comando `ggg checkout <branch> [name]` — checkout di un branch su tutti i repo
 - [ ] Comando `ggg validate` — validazione approfondita della config (URL duplicati, path conflittuali)
-- [ ] Comando `ggg diff` — riassunto dei file modificati in tutti i repo dirty
+- [x] Comando `ggg diff [name]` — riassunto dei file modificati in tutti i repo dirty
 - [ ] Supporto multi-config — merge di più file YAML (es. `work.yaml` + `personal.yaml`)
