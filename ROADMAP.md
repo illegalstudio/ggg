@@ -32,7 +32,7 @@
 - [x] Comando `ggg browse <name>` — apre il repo nel browser
 - [ ] Comando `ggg exec <command>` — esegue un comando in tutti i repo
 - [ ] Comando `ggg sync` — clona i mancanti + pull i puliti in un solo comando
-- [ ] Comando `ggg import` — importa repo da GitHub/GitLab via API
+- [x] Comando `ggg import [org]` — importa repo da GitHub via `gh` CLI
 - [ ] Comando `ggg export` — esporta la config in formato condivisibile
 - [x] Shell alias — `gcd` function shell per navigare senza `eval`
 - [ ] Completions dinamiche — autocompletamento nomi repo per bash/zsh/fish

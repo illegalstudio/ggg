@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 
 	"go-git-get/config"
 	"go-git-get/ui"
@@ -61,4 +62,14 @@ func defaultEditor() string {
 		return editor
 	}
 	return "vi"
+}
+
+// requireBinary checks if a binary is available in $PATH.
+// Returns nil if found, or a user-friendly error if not.
+func requireBinary(name string) error {
+	_, err := exec.LookPath(name)
+	if err != nil {
+		return fmt.Errorf("%s is not installed. Install it from https://cli.github.com", name)
+	}
+	return nil
 }
