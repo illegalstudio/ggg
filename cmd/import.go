@@ -161,12 +161,11 @@ func selectOrg() (string, error) {
 }
 
 func fetchRepos(org string) ([]ghRepo, error) {
-	out, err := exec.Command("gh", "api",
+	out, err := exec.Command("gh", "api", "--paginate",
 		fmt.Sprintf("/users/%s/repos?per_page=100&sort=full_name", org),
 	).Output()
 	if err != nil {
-		// Try as org endpoint
-		out, err = exec.Command("gh", "api",
+		out, err = exec.Command("gh", "api", "--paginate",
 			fmt.Sprintf("/orgs/%s/repos?per_page=100&sort=full_name", org),
 		).Output()
 		if err != nil {
@@ -182,8 +181,32 @@ func fetchRepos(org string) ([]ghRepo, error) {
 }
 
 func selectRepos(repos []ghRepo) ([]ghRepo, error) {
-	options := make([]huh.Option[int], len(repos))
-	for i, r := range repos {
+	var filter string
+	err := huh.NewInput().
+		Title(fmt.Sprintf("%d repositories found. Filter by name (leave empty for all)", len(repos))).
+		Value(&filter).
+		Run()
+	if err != nil {
+		return nil, err
+	}
+
+	visible := repos
+	if filter != "" {
+		filterLower := strings.ToLower(filter)
+		visible = nil
+		for _, r := range repos {
+			if strings.Contains(strings.ToLower(r.FullName), filterLower) {
+				visible = append(visible, r)
+			}
+		}
+		if len(visible) == 0 {
+			fmt.Println(ui.Info.Render(fmt.Sprintf("No repositories match %q.", filter)))
+			return nil, nil
+		}
+	}
+
+	options := make([]huh.Option[int], len(visible))
+	for i, r := range visible {
 		label := r.FullName
 		if r.Private {
 			label += " 🔒"
@@ -192,11 +215,10 @@ func selectRepos(repos []ghRepo) ([]ghRepo, error) {
 	}
 
 	var selected []int
-	err := huh.NewMultiSelect[int]().
-		Title("Select repositories to import").
-		Description("/ filter → esc apply → space toggle · ctrl+a all · enter confirm").
+	err = huh.NewMultiSelect[int]().
+		Title(fmt.Sprintf("Select repositories to import (%d shown)", len(visible))).
+		Description("space toggle · ctrl+a all · enter confirm").
 		Options(options...).
-		Filterable(true).
 		Height(20).
 		Value(&selected).
 		Run()
@@ -206,7 +228,7 @@ func selectRepos(repos []ghRepo) ([]ghRepo, error) {
 
 	result := make([]ghRepo, len(selected))
 	for i, idx := range selected {
-		result[i] = repos[idx]
+		result[i] = visible[idx]
 	}
 	return result, nil
 }
