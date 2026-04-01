@@ -6,58 +6,53 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const shellFunction = `# GGG shell integration
-# Add this to your .bashrc, .zshrc, or config.fish
-ggg() {
-  if [ "$1" = "cd" ]; then
-    if [ -z "$2" ]; then
-      echo "Usage: ggg cd <name>"
-      return 1
-    fi
-    local dir
-    dir=$(command ggg cd "$2" 2>&1)
-    if [ $? -eq 0 ]; then
-      cd "$dir"
-    else
-      echo "$dir"
-      return 1
-    fi
+const shellFunction = `# GGG shell integration — gcd alias
+# Add this to your .bashrc or .zshrc
+gcd() {
+  if [ -z "$1" ]; then
+    echo "Usage: gcd <name>"
+    return 1
+  fi
+  local dir
+  dir=$(ggg cd "$1" 2>&1)
+  if [ $? -eq 0 ]; then
+    cd "$dir"
   else
-    command ggg "$@"
+    echo "$dir"
+    return 1
   fi
 }
 `
 
-const fishFunction = `# GGG shell integration for fish
+const fishFunction = `# GGG shell integration for fish — gcd alias
 # Add this to your ~/.config/fish/config.fish
-function ggg
-  if test "$argv[1]" = "cd"
-    if test -z "$argv[2]"
-      echo "Usage: ggg cd <name>"
-      return 1
-    end
-    set -l dir (command ggg cd $argv[2] 2>&1)
-    if test $status -eq 0
-      cd $dir
-    else
-      echo $dir
-      return 1
-    end
+function gcd
+  if test -z "$argv[1]"
+    echo "Usage: gcd <name>"
+    return 1
+  end
+  set -l dir (command ggg cd $argv[1] 2>&1)
+  if test $status -eq 0
+    cd $dir
   else
-    command ggg $argv
+    echo $dir
+    return 1
   end
 end
 `
 
 var shellInitCmd = &cobra.Command{
-	Use:   "shell-init [bash|zsh|fish]",
-	Short: "Print shell integration script (add to your shell rc file)",
-	Long: `Print a shell function that wraps ggg to enable seamless "ggg cd".
+	Use:     "shell-init [bash|zsh|fish]",
+	Short:   "Print shell integration script (gcd alias)",
+	GroupID: GroupConfig,
+	Long: `Print a shell function that defines the "gcd" alias for quick navigation.
 
 Add to your shell configuration:
   bash:  eval "$(ggg shell-init bash)"   (in ~/.bashrc)
   zsh:   eval "$(ggg shell-init zsh)"    (in ~/.zshrc)
-  fish:  ggg shell-init fish | source    (in ~/.config/fish/config.fish)`,
+  fish:  ggg shell-init fish | source    (in ~/.config/fish/config.fish)
+
+Then use "gcd <name>" to navigate to a repository.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		shell := "zsh"

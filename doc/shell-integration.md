@@ -2,7 +2,7 @@
 
 ## Quick Setup
 
-Use `ggg shell-init` to generate a shell wrapper that makes `ggg cd` work seamlessly:
+Use `ggg shell-init` to generate a `gcd` shell function for quick navigation:
 
 ### Bash
 
@@ -28,32 +28,33 @@ Add to `~/.config/fish/config.fish`:
 ggg shell-init fish | source
 ```
 
-Then reload your shell and use `ggg cd` directly:
+Then reload your shell and use `gcd`:
 
 ```bash
-ggg cd myrepo
+gcd myrepo
 ```
 
 ## How It Works
 
-A subprocess cannot change the parent shell's directory. The `ggg shell-init` command outputs a shell function that wraps the `ggg` binary. When you run `ggg cd <name>`, the wrapper intercepts the `cd` subcommand, captures the path from the binary, and runs `cd` in the current shell. All other commands are passed through to the binary unchanged.
+A subprocess cannot change the parent shell's directory. The `ggg shell-init` command outputs a `gcd` shell function that calls `ggg cd <name>` under the hood, captures the path, and runs `cd` in the current shell.
+
+The original `ggg cd <name>` command still works as before — it prints the repository path to stdout, so you can also use it with `eval`:
+
+```bash
+eval $(ggg cd myrepo)
+```
 
 ## Usage
 
 ```bash
 # Navigate to a repo by name (partial match works)
-ggg cd myrepo
+gcd myrepo
 
 # Full URL also works
-ggg cd git@github.com:user/repo.git
+gcd git@github.com:user/repo.git
+
+# Or use ggg cd directly with eval
+eval $(ggg cd myrepo)
 ```
 
 If multiple repos match the name, GGG presents an interactive selector to choose one.
-
-## Manual Setup
-
-If you prefer not to use `ggg shell-init`, you can use `eval` directly:
-
-```bash
-eval $(ggg cd myrepo)
-```
