@@ -41,15 +41,19 @@ var checkoutCmd = &cobra.Command{
 			}
 			repos = filtered
 		} else {
-			var confirm bool
-			err := huh.NewConfirm().
+			var choice string
+			err := huh.NewSelect[string]().
 				Title(fmt.Sprintf("Checkout branch %q in all %d repositories?", branch, len(repos))).
-				Value(&confirm).
+				Options(
+					huh.NewOption("Yes, checkout all", "yes"),
+					huh.NewOption("No, abort", "no"),
+				).
+				Value(&choice).
 				Run()
 			if err != nil {
 				return err
 			}
-			if !confirm {
+			if choice == "no" {
 				fmt.Println(ui.Muted.Render("Aborted."))
 				return nil
 			}

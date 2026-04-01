@@ -36,15 +36,19 @@ var diffCmd = &cobra.Command{
 			}
 			repos = filtered
 		} else {
-			var confirm bool
-			err := huh.NewConfirm().
+			var choice string
+			err := huh.NewSelect[string]().
 				Title(fmt.Sprintf("Show diff for all %d repositories?", len(repos))).
-				Value(&confirm).
+				Options(
+					huh.NewOption("Yes, show all", "yes"),
+					huh.NewOption("No, abort", "no"),
+				).
+				Value(&choice).
 				Run()
 			if err != nil {
 				return err
 			}
-			if !confirm {
+			if choice == "no" {
 				fmt.Println(ui.Muted.Render("Aborted."))
 				return nil
 			}
