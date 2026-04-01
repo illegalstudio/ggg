@@ -24,8 +24,9 @@ type repoStatus struct {
 }
 
 var statusCmd = &cobra.Command{
-	Use:   "status",
-	Short: "Show status of all configured repositories",
+	Use:     "status",
+	Short:   "Show status of all configured repositories",
+	GroupID: GroupInfo,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {

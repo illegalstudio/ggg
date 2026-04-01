@@ -9,12 +9,36 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const (
+	GroupConfig = "config"
+	GroupRepo   = "repo"
+	GroupInfo   = "info"
+)
+
 var rootCmd = &cobra.Command{
 	Use:   "ggg",
 	Short: "Go Git Get — clone and manage git repositories from a config file",
+	Long: `Go Git Get — clone and manage git repositories from a config file.
+
+Shell Integration:
+  Run "ggg shell-init" to generate a "gcd" shell function for quick navigation.
+
+    eval "$(ggg shell-init zsh)"    # add to ~/.zshrc
+    eval "$(ggg shell-init bash)"   # add to ~/.bashrc
+    ggg shell-init fish | source    # add to ~/.config/fish/config.fish
+
+  Then use "gcd <name>" to cd into any repository.`,
 }
 
 func Execute() {
+	rootCmd.AddGroup(
+		&cobra.Group{ID: GroupConfig, Title: "Configuration:"},
+		&cobra.Group{ID: GroupRepo, Title: "Repository Operations:"},
+		&cobra.Group{ID: GroupInfo, Title: "Info & Diagnostics:"},
+	)
+	rootCmd.SetHelpCommandGroupID(GroupInfo)
+	rootCmd.SetCompletionCommandGroupID(GroupConfig)
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

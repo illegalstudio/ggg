@@ -10,8 +10,9 @@ import (
 )
 
 var cdCmd = &cobra.Command{
-	Use:   "cd <name>",
-	Short: "Print the path of a repository (use ggg shell-init for seamless cd)",
+	Use:     "cd <name>",
+	Short:   "Print the path of a repository (use ggg shell-init for seamless cd)",
+	GroupID: GroupRepo,
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()

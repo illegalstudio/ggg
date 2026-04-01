@@ -11,8 +11,9 @@ import (
 )
 
 var initCmd = &cobra.Command{
-	Use:   "init",
-	Short: "Generate a default configuration file",
+	Use:     "init",
+	Short:   "Generate a default configuration file",
+	GroupID: GroupConfig,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		path := config.ConfigPath()
 

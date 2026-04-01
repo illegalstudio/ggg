@@ -13,8 +13,9 @@ import (
 )
 
 var pullCmd = &cobra.Command{
-	Use:   "pull [name]",
-	Short: "Pull latest changes (all or a specific repo, only if clean)",
+	Use:     "pull [name]",
+	Short:   "Pull latest changes (all or a specific repo, only if clean)",
+	GroupID: GroupRepo,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {

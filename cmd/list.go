@@ -11,8 +11,9 @@ import (
 )
 
 var listCmd = &cobra.Command{
-	Use:   "list",
-	Short: "List configured repositories and their status",
+	Use:     "list",
+	Short:   "List configured repositories and their status",
+	GroupID: GroupInfo,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {

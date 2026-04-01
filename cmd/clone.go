@@ -15,8 +15,9 @@ import (
 )
 
 var cloneCmd = &cobra.Command{
-	Use:   "clone [name]",
-	Short: "Clone repositories (all or a specific one)",
+	Use:     "clone [name]",
+	Short:   "Clone repositories (all or a specific one)",
+	GroupID: GroupRepo,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {

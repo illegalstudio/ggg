@@ -21,8 +21,9 @@ type outdatedResult struct {
 }
 
 var outdatedCmd = &cobra.Command{
-	Use:   "outdated",
-	Short: "Show repositories that are behind their remote",
+	Use:     "outdated",
+	Short:   "Show repositories that are behind their remote",
+	GroupID: GroupInfo,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {

@@ -20,8 +20,9 @@ type checkResult struct {
 }
 
 var doctorCmd = &cobra.Command{
-	Use:   "doctor",
-	Short: "Run health checks on configuration and repositories",
+	Use:     "doctor",
+	Short:   "Run health checks on configuration and repositories",
+	GroupID: GroupInfo,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var results []checkResult
 
