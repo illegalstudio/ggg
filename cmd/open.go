@@ -46,17 +46,9 @@ Examples:
 			return fmt.Errorf("repository is not cloned: %s", fullPath)
 		}
 
-		editor := ""
+		editor := defaultEditor()
 		if len(args) == 2 {
 			editor = args[1]
-		} else {
-			editor = os.Getenv("EDITOR")
-			if editor == "" {
-				editor = os.Getenv("VISUAL")
-			}
-			if editor == "" {
-				editor = "vi"
-			}
 		}
 
 		fmt.Printf("  %s Opening %s in %s\n", ui.Info.Render("●"), ui.Repo.Render(r.URL), ui.Repo.Render(editor))

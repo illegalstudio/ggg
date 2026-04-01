@@ -22,13 +22,7 @@ var configCmd = &cobra.Command{
 			return fmt.Errorf("config file not found at %s (run ggg init first)", path)
 		}
 
-		editor := os.Getenv("EDITOR")
-		if editor == "" {
-			editor = os.Getenv("VISUAL")
-		}
-		if editor == "" {
-			editor = "vi"
-		}
+		editor := defaultEditor()
 
 		fmt.Printf("  %s Opening %s with %s\n", ui.Info.Render("●"), ui.Path.Render(path), ui.Repo.Render(editor))
 

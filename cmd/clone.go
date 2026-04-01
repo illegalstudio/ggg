@@ -19,48 +19,28 @@ var cloneCmd = &cobra.Command{
 	Short:   "Clone repositories (all or a specific one)",
 	GroupID: GroupRepo,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := config.Load()
+		cfg, repos, err := loadRepos(cmd)
 		if err != nil {
 			return err
 		}
-
-		if len(cfg.Repos) == 0 {
-			fmt.Println(ui.Info.Render("No repositories configured."))
-			return nil
-		}
-
-		group, _ := cmd.Flags().GetString("group")
-		repos := filterByGroup(cfg.Repos, group)
-
 		if len(repos) == 0 {
-			fmt.Println(ui.Info.Render("No repositories match the criteria."))
 			return nil
 		}
 
-		if len(args) == 0 {
-			var choice string
-			err := huh.NewSelect[string]().
-				Title(fmt.Sprintf("Clone all %d repositories?", len(repos))).
-				Options(
-					huh.NewOption("Yes, clone all", "yes"),
-					huh.NewOption("No, abort", "no"),
-				).
-				Value(&choice).
-				Run()
-			if err != nil {
-				return err
-			}
-			if choice == "no" {
-				fmt.Println(ui.Muted.Render("Aborted."))
-				return nil
-			}
-		}
 		if len(args) > 0 {
 			filtered, err := filterRepo(cfg.Repos, args[0])
 			if err != nil {
 				return err
 			}
 			repos = filtered
+		} else {
+			ok, err := confirmAll(fmt.Sprintf("Clone all %d repositories?", len(repos)), "Yes, clone all")
+			if err != nil {
+				return err
+			}
+			if !ok {
+				return nil
+			}
 		}
 
 		// Separate already cloned from pending

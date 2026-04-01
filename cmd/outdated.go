@@ -25,16 +25,11 @@ var outdatedCmd = &cobra.Command{
 	Short:   "Show repositories that are behind their remote",
 	GroupID: GroupInfo,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := config.Load()
+		cfg, repos, err := loadRepos(cmd)
 		if err != nil {
 			return err
 		}
-
-		group, _ := cmd.Flags().GetString("group")
-		repos := filterByGroup(cfg.Repos, group)
-
 		if len(repos) == 0 {
-			fmt.Println(ui.Info.Render("No repositories configured."))
 			return nil
 		}
 

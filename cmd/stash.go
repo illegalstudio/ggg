@@ -8,7 +8,6 @@ import (
 	"go-git-get/repo"
 	"go-git-get/ui"
 
-	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/huh/spinner"
 	"github.com/spf13/cobra"
 )
@@ -18,40 +17,26 @@ var stashCmd = &cobra.Command{
 	Short:   "Stash changes in dirty repositories",
 	GroupID: GroupRepo,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := config.Load()
+		cfg, repos, err := loadRepos(cmd)
 		if err != nil {
 			return err
 		}
-
-		group, _ := cmd.Flags().GetString("group")
-		repos := filterByGroup(cfg.Repos, group)
-
 		if len(repos) == 0 {
-			fmt.Println(ui.Info.Render("No repositories configured."))
 			return nil
 		}
 
 		if len(args) > 0 {
-			filtered, err := filterRepo(cfg.Repos, args[0])
+			filtered, err := filterRepo(repos, args[0])
 			if err != nil {
 				return err
 			}
 			repos = filtered
 		} else {
-			var choice string
-			err := huh.NewSelect[string]().
-				Title(fmt.Sprintf("Stash changes in all %d repositories?", len(repos))).
-				Options(
-					huh.NewOption("Yes, stash all", "yes"),
-					huh.NewOption("No, abort", "no"),
-				).
-				Value(&choice).
-				Run()
+			ok, err := confirmAll(fmt.Sprintf("Stash changes in all %d repositories?", len(repos)), "Yes, stash all")
 			if err != nil {
 				return err
 			}
-			if choice == "no" {
-				fmt.Println(ui.Muted.Render("Aborted."))
+			if !ok {
 				return nil
 			}
 		}

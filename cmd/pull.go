@@ -17,16 +17,11 @@ var pullCmd = &cobra.Command{
 	Short:   "Pull latest changes (all or a specific repo, only if clean)",
 	GroupID: GroupRepo,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := config.Load()
+		cfg, repos, err := loadRepos(cmd)
 		if err != nil {
 			return err
 		}
-
-		group, _ := cmd.Flags().GetString("group")
-		repos := filterByGroup(cfg.Repos, group)
-
 		if len(repos) == 0 {
-			fmt.Println(ui.Info.Render("No repositories configured."))
 			return nil
 		}
 

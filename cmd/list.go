@@ -3,7 +3,6 @@ package cmd
 import (
 	"fmt"
 
-	"go-git-get/config"
 	"go-git-get/repo"
 	"go-git-get/ui"
 
@@ -15,16 +14,11 @@ var listCmd = &cobra.Command{
 	Short:   "List configured repositories and their status",
 	GroupID: GroupInfo,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := config.Load()
+		cfg, repos, err := loadRepos(cmd)
 		if err != nil {
 			return err
 		}
-
-		group, _ := cmd.Flags().GetString("group")
-		repos := filterByGroup(cfg.Repos, group)
-
 		if len(repos) == 0 {
-			fmt.Println(ui.Info.Render("No repositories configured."))
 			return nil
 		}
 

@@ -8,7 +8,6 @@ import (
 	"go-git-get/repo"
 	"go-git-get/ui"
 
-	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/huh/spinner"
 	"github.com/spf13/cobra"
 )
@@ -21,40 +20,26 @@ var checkoutCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		branch := args[0]
 
-		cfg, err := config.Load()
+		cfg, repos, err := loadRepos(cmd)
 		if err != nil {
 			return err
 		}
-
-		group, _ := cmd.Flags().GetString("group")
-		repos := filterByGroup(cfg.Repos, group)
-
 		if len(repos) == 0 {
-			fmt.Println(ui.Info.Render("No repositories configured."))
 			return nil
 		}
 
 		if len(args) > 1 {
-			filtered, err := filterRepo(cfg.Repos, args[1])
+			filtered, err := filterRepo(repos, args[1])
 			if err != nil {
 				return err
 			}
 			repos = filtered
 		} else {
-			var choice string
-			err := huh.NewSelect[string]().
-				Title(fmt.Sprintf("Checkout branch %q in all %d repositories?", branch, len(repos))).
-				Options(
-					huh.NewOption("Yes, checkout all", "yes"),
-					huh.NewOption("No, abort", "no"),
-				).
-				Value(&choice).
-				Run()
+			ok, err := confirmAll(fmt.Sprintf("Checkout branch %q in all %d repositories?", branch, len(repos)), "Yes, checkout all")
 			if err != nil {
 				return err
 			}
-			if choice == "no" {
-				fmt.Println(ui.Muted.Render("Aborted."))
+			if !ok {
 				return nil
 			}
 		}
