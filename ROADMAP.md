@@ -37,3 +37,16 @@
 - [ ] Completions dinamiche — autocompletamento nomi repo per bash/zsh/fish
 - [ ] Config watch — flag `--watch` su status con refresh periodico
 - [ ] Notifiche dirty — integrazione con prompt shell (starship/p10k)
+
+## v1.2.0
+
+- [ ] Comando `ggg add <url> --clone` — aggiunge e clona in un colpo solo
+- [ ] Comando `ggg add <url> --group <name>` — specificare gruppo e path da CLI
+- [ ] Comando `ggg list --groups` — mostra i gruppi disponibili
+- [ ] Comando `ggg rename <old> <new>` — rinomina il path/alias di un repo
+- [ ] Comando `ggg stash` — esegue `git stash` su tutti i repo dirty
+- [ ] Comando `ggg branch [name]` — mostra o filtra i repo per branch corrente
+- [ ] Comando `ggg checkout <branch>` — checkout di un branch su tutti i repo
+- [ ] Comando `ggg validate` — validazione approfondita della config (URL duplicati, path conflittuali)
+- [ ] Comando `ggg diff` — riassunto dei file modificati in tutti i repo dirty
+- [ ] Supporto multi-config — merge di più file YAML (es. `work.yaml` + `personal.yaml`)
