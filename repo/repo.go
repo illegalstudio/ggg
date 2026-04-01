@@ -124,6 +124,44 @@ func RemoteReachable(repoURL string) bool {
 	return cmd.Run() == nil
 }
 
+// Stash runs git stash in the given repo directory.
+func Stash(repoPath string) error {
+	cmd := exec.Command("git", "stash", "--quiet")
+	cmd.Dir = repoPath
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("git stash failed: %w", err)
+	}
+	return nil
+}
+
+// Checkout switches to the given branch in the repo directory.
+func Checkout(repoPath, branch string) error {
+	cmd := exec.Command("git", "checkout", "--quiet", branch)
+	cmd.Dir = repoPath
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("git checkout failed: %w", err)
+	}
+	return nil
+}
+
+// HasBranch checks if a branch exists locally in the repo.
+func HasBranch(repoPath, branch string) bool {
+	cmd := exec.Command("git", "rev-parse", "--verify", "--quiet", branch)
+	cmd.Dir = repoPath
+	return cmd.Run() == nil
+}
+
+// DiffSummary returns the short diff stat for a dirty repo.
+func DiffSummary(repoPath string) (string, error) {
+	cmd := exec.Command("git", "diff", "--stat")
+	cmd.Dir = repoPath
+	out, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("git diff failed: %w", err)
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
 // Clone clones a git repository to the given path (quiet mode, no stdout).
 func Clone(repoURL, destPath string) error {
 	if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
