@@ -194,7 +194,7 @@ func selectRepos(repos []ghRepo) ([]ghRepo, error) {
 	var selected []int
 	err := huh.NewMultiSelect[int]().
 		Title("Select repositories to import").
-		Description("/ filter · x toggle · ctrl+a all · enter confirm").
+		Description("/ filter → esc apply → space toggle · ctrl+a all · enter confirm").
 		Options(options...).
 		Filterable(true).
 		Height(20).
