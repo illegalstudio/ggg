@@ -123,25 +123,31 @@ var importCmd = &cobra.Command{
 	},
 }
 
+const personalAccount = "__personal__"
+
+func currentUser() (string, error) {
+	out, err := exec.Command("gh", "api", "/user", "--jq", ".login").Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch user: %w", err)
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
 func selectOrg() (string, error) {
+	username, err := currentUser()
+	if err != nil {
+		return "", err
+	}
+
 	out, err := exec.Command("gh", "api", "/user/orgs", "--jq", ".[].login").Output()
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch organizations: %w", err)
 	}
 
-	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
-
-	// Get the authenticated user
-	userOut, err := exec.Command("gh", "api", "/user", "--jq", ".login").Output()
-	if err != nil {
-		return "", fmt.Errorf("failed to fetch user: %w", err)
-	}
-	username := strings.TrimSpace(string(userOut))
-
 	options := []huh.Option[string]{
-		huh.NewOption(fmt.Sprintf("%s (personal)", username), username),
+		huh.NewOption(fmt.Sprintf("%s (personal)", username), personalAccount),
 	}
-	for _, line := range lines {
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
 		if line != "" {
 			options = append(options, huh.NewOption(line, line))
 		}
@@ -160,17 +166,28 @@ func selectOrg() (string, error) {
 	return choice, nil
 }
 
-func fetchRepos(org string) ([]ghRepo, error) {
-	out, err := exec.Command("gh", "api", "--paginate",
-		fmt.Sprintf("/users/%s/repos?per_page=100&sort=full_name", org),
-	).Output()
-	if err != nil {
+func fetchRepos(account string) ([]ghRepo, error) {
+	var out []byte
+	var err error
+
+	if account == personalAccount {
+		// Authenticated endpoint: returns all repos (public + private)
 		out, err = exec.Command("gh", "api", "--paginate",
-			fmt.Sprintf("/orgs/%s/repos?per_page=100&sort=full_name", org),
+			"/user/repos?per_page=100&affiliation=owner&sort=full_name",
+		).Output()
+	} else {
+		// Try as org first, fall back to user
+		out, err = exec.Command("gh", "api", "--paginate",
+			fmt.Sprintf("/orgs/%s/repos?per_page=100&sort=full_name", account),
 		).Output()
 		if err != nil {
-			return nil, fmt.Errorf("failed to fetch repos: %w", err)
+			out, err = exec.Command("gh", "api", "--paginate",
+				fmt.Sprintf("/users/%s/repos?per_page=100&sort=full_name", account),
+			).Output()
 		}
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch repos: %w", err)
 	}
 
 	var repos []ghRepo
@@ -181,12 +198,16 @@ func fetchRepos(org string) ([]ghRepo, error) {
 }
 
 func selectRepos(repos []ghRepo) ([]ghRepo, error) {
+	// Step 1: optional filter
 	var filter string
-	err := huh.NewInput().
-		Title(fmt.Sprintf("%d repositories found. Filter by name (leave empty for all)", len(repos))).
-		Value(&filter).
-		Run()
-	if err != nil {
+	filterForm := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title(fmt.Sprintf("%d repositories found. Filter by name (leave empty for all)", len(repos))).
+				Value(&filter),
+		),
+	)
+	if err := filterForm.Run(); err != nil {
 		return nil, err
 	}
 
@@ -205,6 +226,7 @@ func selectRepos(repos []ghRepo) ([]ghRepo, error) {
 		}
 	}
 
+	// Step 2: multi-select from visible repos
 	options := make([]huh.Option[int], len(visible))
 	for i, r := range visible {
 		label := r.FullName
@@ -215,14 +237,17 @@ func selectRepos(repos []ghRepo) ([]ghRepo, error) {
 	}
 
 	var selected []int
-	err = huh.NewMultiSelect[int]().
-		Title(fmt.Sprintf("Select repositories to import (%d shown)", len(visible))).
-		Description("space toggle · ctrl+a all · enter confirm").
-		Options(options...).
-		Height(20).
-		Value(&selected).
-		Run()
-	if err != nil {
+	selectForm := huh.NewForm(
+		huh.NewGroup(
+			huh.NewMultiSelect[int]().
+				Title(fmt.Sprintf("Select repositories to import (%d shown)", len(visible))).
+				Description("space toggle · ctrl+a all · enter confirm").
+				Options(options...).
+				Height(20).
+				Value(&selected),
+		),
+	)
+	if err := selectForm.Run(); err != nil {
 		return nil, err
 	}
 
