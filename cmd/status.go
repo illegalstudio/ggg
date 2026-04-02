@@ -36,6 +36,9 @@ var statusCmd = &cobra.Command{
 			return nil
 		}
 
+		filter, _ := cmd.Flags().GetString("filter")
+		repos = filterByName(repos, filter)
+
 		statuses := make([]repoStatus, len(repos))
 		var wg sync.WaitGroup
 
@@ -106,5 +109,6 @@ var statusCmd = &cobra.Command{
 
 func init() {
 	statusCmd.Flags().StringP("group", "g", "", "Show only repos in this group")
+	statusCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
 	rootCmd.AddCommand(statusCmd)
 }

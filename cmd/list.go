@@ -22,6 +22,9 @@ var listCmd = &cobra.Command{
 			return nil
 		}
 
+		filter, _ := cmd.Flags().GetString("filter")
+		repos = filterByName(repos, filter)
+
 		fmt.Println(ui.Title.Render("Repositories"))
 		fmt.Println()
 		for _, r := range repos {
@@ -44,5 +47,6 @@ var listCmd = &cobra.Command{
 
 func init() {
 	listCmd.Flags().StringP("group", "g", "", "List only repos in this group")
+	listCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
 	rootCmd.AddCommand(listCmd)
 }

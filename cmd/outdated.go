@@ -33,6 +33,9 @@ var outdatedCmd = &cobra.Command{
 			return nil
 		}
 
+		filter, _ := cmd.Flags().GetString("filter")
+		repos = filterByName(repos, filter)
+
 		results := make([]outdatedResult, len(repos))
 		var wg sync.WaitGroup
 
@@ -113,5 +116,6 @@ var outdatedCmd = &cobra.Command{
 
 func init() {
 	outdatedCmd.Flags().StringP("group", "g", "", "Check only repos in this group")
+	outdatedCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
 	rootCmd.AddCommand(outdatedCmd)
 }

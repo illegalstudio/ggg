@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 
 	"go-git-get/config"
+	"go-git-get/repo"
 	"go-git-get/ui"
 
 	"github.com/charmbracelet/huh"
@@ -51,6 +53,24 @@ func confirmAll(title, yesLabel string) (bool, error) {
 		return false, nil
 	}
 	return true, nil
+}
+
+// filterByName filters repos by substring match on URL, path, or derived path.
+func filterByName(repos []config.Repo, filter string) []config.Repo {
+	if filter == "" {
+		return repos
+	}
+	filterLower := strings.ToLower(filter)
+	var filtered []config.Repo
+	for _, r := range repos {
+		derived, _ := repo.DerivePathFromURL(r.URL)
+		if strings.Contains(strings.ToLower(r.URL), filterLower) ||
+			strings.Contains(strings.ToLower(r.Path), filterLower) ||
+			strings.Contains(strings.ToLower(derived), filterLower) {
+			filtered = append(filtered, r)
+		}
+	}
+	return filtered
 }
 
 // defaultEditor returns the user's preferred editor from $EDITOR, $VISUAL, or "vi".
