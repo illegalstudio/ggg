@@ -27,7 +27,9 @@ Shell Integration:
     eval "$(ggg shell-init bash)"   # add to ~/.bashrc
     ggg shell-init fish | source    # add to ~/.config/fish/config.fish
 
-  Then use "gcd <name>" to cd into any repository.`,
+  Then use "gcd <name>" to cd into any repository.
+
+Use "ggg <command> --help" for details on any command.`,
 }
 
 func Execute() {
