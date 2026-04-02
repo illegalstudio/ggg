@@ -26,7 +26,7 @@ var pullCmd = &cobra.Command{
 		}
 
 		if len(args) > 0 {
-			filtered, err := filterRepo(cfg.Repos, args[0])
+			filtered, err := filterRepo(repos, args[0])
 			if err != nil {
 				return err
 			}
