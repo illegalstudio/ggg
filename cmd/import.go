@@ -204,13 +204,13 @@ func selectRepos(repos []ghRepo) ([]ghRepo, error) {
 		if r.Private {
 			label += " 🔒"
 		}
-		options[i] = huh.NewOption(label, i).Selected(true)
+		options[i] = huh.NewOption(label, i)
 	}
 
 	var selected []int
 	err := huh.NewMultiSelect[int]().
-		Title("Select repositories to import").
-		Description("/ filter · space toggle · ctrl+a all · enter confirm").
+		Title(fmt.Sprintf("Select repositories to import (%d found)", len(repos))).
+		Description("ctrl+a select all · / filter · space toggle · enter confirm").
 		Options(options...).
 		Filterable(true).
 		Height(20).
