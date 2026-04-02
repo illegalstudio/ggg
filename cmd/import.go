@@ -22,10 +22,6 @@ type ghRepo struct {
 	Private  bool   `json:"private"`
 }
 
-type ghOrg struct {
-	Login string `json:"login"`
-}
-
 var importCmd = &cobra.Command{
 	Use:     "import [org]",
 	Short:   "Import repositories from GitHub via gh CLI",
@@ -51,16 +47,16 @@ var importCmd = &cobra.Command{
 		group, _ := cmd.Flags().GetString("group")
 
 		var repos []ghRepo
+		var fetchErr error
 		action := func() {
-			var err error
-			repos, err = fetchRepos(org)
-			if err != nil {
-				repos = nil
-			}
+			repos, fetchErr = fetchRepos(org)
 		}
 
 		if err := spinner.New().Title(fmt.Sprintf("Fetching repositories from %s...", org)).Action(action).Run(); err != nil {
 			return err
+		}
+		if fetchErr != nil {
+			return fetchErr
 		}
 
 		if len(repos) == 0 {
