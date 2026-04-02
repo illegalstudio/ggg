@@ -47,7 +47,7 @@ var importCmd = &cobra.Command{
 			org = selected
 		}
 
-		useSSH, _ := cmd.Flags().GetBool("ssh")
+		useHTTP, _ := cmd.Flags().GetBool("http")
 		group, _ := cmd.Flags().GetString("group")
 
 		var repos []ghRepo
@@ -94,9 +94,9 @@ var importCmd = &cobra.Command{
 
 		added := 0
 		for _, r := range selected {
-			url := r.CloneURL
-			if useSSH {
-				url = r.SSHURL
+			url := r.SSHURL
+			if useHTTP {
+				url = r.CloneURL
 			}
 
 			if existing[url] {
@@ -198,37 +198,8 @@ func fetchRepos(account string) ([]ghRepo, error) {
 }
 
 func selectRepos(repos []ghRepo) ([]ghRepo, error) {
-	// Step 1: optional filter
-	var filter string
-	filterForm := huh.NewForm(
-		huh.NewGroup(
-			huh.NewInput().
-				Title(fmt.Sprintf("%d repositories found. Filter by name (leave empty for all)", len(repos))).
-				Value(&filter),
-		),
-	)
-	if err := filterForm.Run(); err != nil {
-		return nil, err
-	}
-
-	visible := repos
-	if filter != "" {
-		filterLower := strings.ToLower(filter)
-		visible = nil
-		for _, r := range repos {
-			if strings.Contains(strings.ToLower(r.FullName), filterLower) {
-				visible = append(visible, r)
-			}
-		}
-		if len(visible) == 0 {
-			fmt.Println(ui.Info.Render(fmt.Sprintf("No repositories match %q.", filter)))
-			return nil, nil
-		}
-	}
-
-	// Step 2: multi-select from visible repos
-	options := make([]huh.Option[int], len(visible))
-	for i, r := range visible {
+	options := make([]huh.Option[int], len(repos))
+	for i, r := range repos {
 		label := r.FullName
 		if r.Private {
 			label += " 🔒"
@@ -237,29 +208,27 @@ func selectRepos(repos []ghRepo) ([]ghRepo, error) {
 	}
 
 	var selected []int
-	selectForm := huh.NewForm(
-		huh.NewGroup(
-			huh.NewMultiSelect[int]().
-				Title(fmt.Sprintf("Select repositories to import (%d shown)", len(visible))).
-				Description("space toggle · ctrl+a all · enter confirm").
-				Options(options...).
-				Height(20).
-				Value(&selected),
-		),
-	)
-	if err := selectForm.Run(); err != nil {
+	err := huh.NewMultiSelect[int]().
+		Title("Select repositories to import").
+		Description("/ filter · space toggle · ctrl+a all · enter confirm").
+		Options(options...).
+		Filterable(true).
+		Height(20).
+		Value(&selected).
+		Run()
+	if err != nil {
 		return nil, err
 	}
 
 	result := make([]ghRepo, len(selected))
 	for i, idx := range selected {
-		result[i] = visible[idx]
+		result[i] = repos[idx]
 	}
 	return result, nil
 }
 
 func init() {
-	importCmd.Flags().BoolP("ssh", "s", false, "Use SSH URLs instead of HTTPS")
+	importCmd.Flags().Bool("http", false, "Use HTTPS URLs instead of SSH")
 	importCmd.Flags().StringP("group", "g", "", "Assign imported repos to a group")
 	rootCmd.AddCommand(importCmd)
 }
