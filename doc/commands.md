@@ -199,3 +199,22 @@ ggg outdated --group work
 Fetches from all remotes **in parallel** with a spinner, then reports repos that have commits behind their remote tracking branch (e.g., `5 commits behind`).
 
 If all repos are up to date, prints a success message.
+
+---
+
+## `ggg export`
+
+Export the configuration file to a given path.
+
+```bash
+# Export to a specific file
+ggg export ./my-config.yaml
+
+# Export to a directory (saves as repositories.yaml inside it)
+ggg export ~/Desktop
+
+# Interactive prompt for the destination path
+ggg export
+```
+
+Copies `~/.config/ggg/repositories.yaml` to the specified destination. If no path is provided, an interactive prompt asks for one (defaults to `repositories.yaml` in the current directory).
