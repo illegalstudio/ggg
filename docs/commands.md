@@ -140,6 +140,7 @@ Appends the repo to `~/.config/ggg/repositories.yaml`. Fails if the URL is alrea
 Remove a repository from the configuration.
 
 ```bash
+ggg remove
 ggg remove myrepo
 ggg remove git@github.com:user/old-repo.git
 ```
@@ -147,7 +148,9 @@ ggg remove git@github.com:user/old-repo.git
 Supports the same matching behavior as `clone`:
 1. Exact match against URL, path, or derived path.
 2. Partial, case-insensitive substring match.
-3. Interactive selector on multiple matches.
+3. Interactive selector on multiple matches, with live filtering as you type.
+
+If no argument is provided, GGG shows a searchable selector with all configured repositories and removes the one you choose.
 
 This only removes the entry from the config file — it does **not** delete the cloned directory.
 
@@ -280,6 +283,7 @@ ggg import myorg --http --group work
 | `--group` | `-g` | Assign imported repos to a group. |
 
 Requires [`gh`](https://cli.github.com) to be installed. Presents an interactive multi-select to choose which repos to import. Already-configured repos are skipped.
+In the repository picker, press `/` to filter, `space` to toggle a repo, and `enter` to confirm.
 
 ---
 
