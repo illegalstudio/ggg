@@ -52,21 +52,21 @@ func ConfigPath() string {
 }
 
 func Load() (*Config, error) {
-	viper.SetConfigName("repositories")
-	viper.SetConfigType("yaml")
-
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return nil, fmt.Errorf("cannot determine home directory: %w", err)
 	}
-	viper.AddConfigPath(filepath.Join(home, ".config", "ggg"))
+	v := viper.New()
+	v.SetConfigName("repositories")
+	v.SetConfigType("yaml")
+	v.AddConfigPath(filepath.Join(home, ".config", "ggg"))
 
-	if err := viper.ReadInConfig(); err != nil {
+	if err := v.ReadInConfig(); err != nil {
 		return nil, fmt.Errorf("cannot read config file: %w", err)
 	}
 
 	var cfg Config
-	if err := viper.Unmarshal(&cfg); err != nil {
+	if err := v.Unmarshal(&cfg); err != nil {
 		return nil, fmt.Errorf("cannot parse config file: %w", err)
 	}
 

@@ -2,11 +2,11 @@ package repo
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"testing"
 
 	"go-git-get/config"
+	"go-git-get/internal/testutil"
 )
 
 func TestDerivePathFromURL_SSH(t *testing.T) {
@@ -113,29 +113,7 @@ func TestIsCloned(t *testing.T) {
 // initTestRepo creates a git repo in a temp dir with one commit.
 func initTestRepo(t *testing.T) string {
 	t.Helper()
-	dir := t.TempDir()
-	run := func(args ...string) {
-		t.Helper()
-		cmd := exec.Command("git", args...)
-		cmd.Dir = dir
-		cmd.Env = append(os.Environ(),
-			"GIT_AUTHOR_NAME=test",
-			"GIT_AUTHOR_EMAIL=test@test.com",
-			"GIT_COMMITTER_NAME=test",
-			"GIT_COMMITTER_EMAIL=test@test.com",
-		)
-		out, err := cmd.CombinedOutput()
-		if err != nil {
-			t.Fatalf("git %v failed: %v\n%s", args, err, out)
-		}
-	}
-	run("init", "-b", "main")
-	run("config", "user.email", "test@test.com")
-	run("config", "user.name", "test")
-	os.WriteFile(filepath.Join(dir, "README.md"), []byte("# test"), 0644)
-	run("add", ".")
-	run("commit", "-m", "initial commit")
-	return dir
+	return testutil.InitGitRepo(t)
 }
 
 func TestCurrentBranch(t *testing.T) {

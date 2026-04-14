@@ -174,3 +174,35 @@ func TestFindRepoIndex_NotFound(t *testing.T) {
 		t.Error("expected error for nonexistent repo")
 	}
 }
+
+func TestHTTPURL(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{
+			name: "ssh",
+			in:   "git@github.com:user/repo.git",
+			want: "https://github.com/user/repo",
+		},
+		{
+			name: "https",
+			in:   "https://github.com/user/repo.git",
+			want: "https://github.com/user/repo",
+		},
+		{
+			name: "plain passthrough",
+			in:   "file:///tmp/repo",
+			want: "file:///tmp/repo",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := httpURL(tt.in); got != tt.want {
+				t.Errorf("httpURL(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}

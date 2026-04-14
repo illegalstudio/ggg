@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"go-git-get/internal/testutil"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -95,12 +97,94 @@ func TestSaveAndLoadRaw(t *testing.T) {
 }
 
 func TestConfigPath(t *testing.T) {
+	home := testutil.SetupHome(t)
+
 	path := ConfigPath()
-	if !strings.Contains(path, ".config") {
-		t.Errorf("ConfigPath should contain .config, got %q", path)
+	want := filepath.Join(home, ".config", "ggg", "repositories.yaml")
+	if path != want {
+		t.Errorf("ConfigPath = %q, want %q", path, want)
 	}
-	if !strings.HasSuffix(path, "ggg/repositories.yaml") {
-		t.Errorf("ConfigPath should end with ggg/repositories.yaml, got %q", path)
+}
+
+func TestLoad_ExpandsBaseDir(t *testing.T) {
+	home := testutil.SetupHome(t)
+	testutil.WriteConfig(t, home, `
+base_dir: ~/Projects
+pull_strategy: rebase
+repos:
+  - url: git@github.com:user/repo.git
+`)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if cfg.BaseDir != filepath.Join(home, "Projects") {
+		t.Errorf("BaseDir = %q, want %q", cfg.BaseDir, filepath.Join(home, "Projects"))
+	}
+	if cfg.PullStrategy != PullRebase {
+		t.Errorf("PullStrategy = %q, want %q", cfg.PullStrategy, PullRebase)
+	}
+	if len(cfg.Repos) != 1 || cfg.Repos[0].URL != "git@github.com:user/repo.git" {
+		t.Fatalf("unexpected repos: %+v", cfg.Repos)
+	}
+}
+
+func TestLoad_DefaultBaseDir_WhenMissing(t *testing.T) {
+	home := testutil.SetupHome(t)
+	testutil.WriteConfig(t, home, `
+repos:
+  - url: git@github.com:user/repo.git
+`)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := filepath.Join(home, "Developer")
+	if cfg.BaseDir != want {
+		t.Errorf("BaseDir = %q, want %q", cfg.BaseDir, want)
+	}
+}
+
+func TestSaveAndLoad_WithHomeConfigPath(t *testing.T) {
+	home := testutil.SetupHome(t)
+	cfg := &Config{
+		BaseDir:      "~/Dev",
+		PullStrategy: PullFFOnly,
+		Repos: []Repo{
+			{URL: "git@github.com:a/b.git", Group: "work"},
+			{URL: "https://github.com/c/d.git", Path: "custom/path", PullStrategy: PullRebase},
+		},
+	}
+
+	if err := Save(cfg); err != nil {
+		t.Fatal(err)
+	}
+
+	raw, err := LoadRaw()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if raw.BaseDir != "~/Dev" {
+		t.Errorf("raw BaseDir = %q, want %q", raw.BaseDir, "~/Dev")
+	}
+	if raw.PullStrategy != PullFFOnly {
+		t.Errorf("raw PullStrategy = %q, want %q", raw.PullStrategy, PullFFOnly)
+	}
+
+	loaded, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if loaded.BaseDir != filepath.Join(home, "Dev") {
+		t.Errorf("loaded BaseDir = %q, want %q", loaded.BaseDir, filepath.Join(home, "Dev"))
+	}
+	if len(loaded.Repos) != 2 {
+		t.Fatalf("got %d repos, want 2", len(loaded.Repos))
 	}
 }
 
