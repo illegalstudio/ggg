@@ -46,7 +46,6 @@ var pushCmd = &cobra.Command{
 				continue
 			}
 			if !repo.IsCloned(fullPath) {
-				fmt.Printf("  %s %s %s\n", ui.Muted.Render("○"), ui.Muted.Render(r.URL), ui.Muted.Render("(not cloned)"))
 				continue
 			}
 			ahead, _, err := repo.AheadBehind(fullPath)

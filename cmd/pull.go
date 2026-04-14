@@ -47,50 +47,33 @@ var pullCmd = &cobra.Command{
 			strategy string
 		}
 		type result struct {
-			url    string
-			status string // "pulled", "dirty", "not_cloned", "error"
-			err    error
+			url string
+			err error
 		}
 
 		var jobs []pullJob
-		var skipped []result
 
 		for _, r := range repos {
 			fullPath, err := repo.FullPath(cfg.BaseDir, r)
 			if err != nil {
-				skipped = append(skipped, result{url: r.URL, status: "error", err: err})
 				continue
 			}
 			if !repo.IsCloned(fullPath) {
-				skipped = append(skipped, result{url: r.URL, status: "not_cloned"})
 				continue
 			}
 			dirty, err := repo.IsDirty(fullPath)
 			if err != nil {
-				skipped = append(skipped, result{url: r.URL, status: "error", err: err})
 				continue
 			}
 			if dirty {
-				skipped = append(skipped, result{url: r.URL, status: "dirty"})
 				continue
 			}
 			strategy := string(cfg.ResolvePullStrategy(r))
 			jobs = append(jobs, pullJob{repo: r, fullPath: fullPath, strategy: strategy})
 		}
 
-		// Print skipped repos
-		for _, s := range skipped {
-			switch s.status {
-			case "not_cloned":
-				fmt.Printf("  %s %s %s\n", ui.Muted.Render("○"), ui.Muted.Render(s.url), ui.Muted.Render("(not cloned)"))
-			case "dirty":
-				fmt.Printf("  %s %s %s\n", ui.Error.Render("✗"), ui.Repo.Render(s.url), ui.Muted.Render("(dirty, skipping)"))
-			case "error":
-				fmt.Printf("  %s %s %s\n", ui.Error.Render("✗"), ui.Repo.Render(s.url), ui.Error.Render(s.err.Error()))
-			}
-		}
-
 		if len(jobs) == 0 {
+			fmt.Println(ui.Info.Render("No repositories to pull (all clean, dirty, or not cloned)."))
 			return nil
 		}
 
@@ -104,7 +87,7 @@ var pullCmd = &cobra.Command{
 				go func(idx int, job pullJob) {
 					defer wg.Done()
 					err := repo.Pull(job.fullPath, job.strategy)
-					results[idx] = result{url: job.repo.URL, status: "pulled", err: err}
+					results[idx] = result{url: job.repo.URL, err: err}
 				}(i, j)
 			}
 			wg.Wait()

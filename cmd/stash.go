@@ -57,7 +57,6 @@ var stashCmd = &cobra.Command{
 			}
 			dirty, _ := repo.IsDirty(fullPath)
 			if !dirty {
-				fmt.Printf("  %s %s %s\n", ui.Muted.Render("●"), ui.Muted.Render(r.URL), ui.Muted.Render("(clean)"))
 				continue
 			}
 			jobs = append(jobs, stashJob{repo: r, fullPath: fullPath})

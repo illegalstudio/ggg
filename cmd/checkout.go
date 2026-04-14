@@ -56,11 +56,9 @@ var checkoutCmd = &cobra.Command{
 				continue
 			}
 			if !repo.IsCloned(fullPath) {
-				fmt.Printf("  %s %s %s\n", ui.Muted.Render("○"), ui.Muted.Render(r.URL), ui.Muted.Render("(not cloned)"))
 				continue
 			}
 			if !repo.HasBranch(fullPath, branch) {
-				fmt.Printf("  %s %s %s\n", ui.Muted.Render("○"), ui.Muted.Render(r.URL), ui.Muted.Render(fmt.Sprintf("(no branch %q)", branch)))
 				continue
 			}
 			jobs = append(jobs, checkoutJob{repo: r, fullPath: fullPath})
