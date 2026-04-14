@@ -48,6 +48,6 @@
 - [x] Comando `ggg stash [name]` — esegue `git stash` su tutti i repo dirty
 - [ ] Comando `ggg branch [name]` — mostra o filtra i repo per branch corrente
 - [x] Comando `ggg checkout <branch> [name]` — checkout di un branch su tutti i repo
-- [ ] Comando `ggg validate` — validazione approfondita della config (URL duplicati, path conflittuali)
+- [x] Comando `ggg validate` — validazione approfondita della config (URL duplicati, path conflittuali)
 - [x] Comando `ggg diff [name]` — riassunto dei file modificati in tutti i repo dirty
 - [ ] Supporto multi-config — merge di più file YAML (es. `work.yaml` + `personal.yaml`)

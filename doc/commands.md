@@ -218,3 +218,24 @@ ggg export
 ```
 
 Copies `~/.config/ggg/repositories.yaml` to the specified destination. If no path is provided, an interactive prompt asks for one (defaults to `repositories.yaml` in the current directory).
+
+---
+
+## `ggg validate`
+
+Validate the configuration for errors and conflicts.
+
+```bash
+ggg validate
+```
+
+Checks performed:
+
+| Check | Description |
+|-------|-------------|
+| Duplicate URLs | Detects repos with the same URL |
+| Path conflicts | Detects repos that resolve to the same filesystem path |
+| Pull strategy | Validates global and per-repo `pull_strategy` values |
+| Blank groups | Detects repos with whitespace-only group names |
+
+If no issues are found, prints a success message.
