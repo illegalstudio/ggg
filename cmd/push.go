@@ -2,13 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"sync"
 
 	"go-git-get/config"
 	"go-git-get/repo"
 	"go-git-get/ui"
 
-	"github.com/charmbracelet/huh/spinner"
 	"github.com/spf13/cobra"
 )
 
@@ -18,16 +16,13 @@ var pushCmd = &cobra.Command{
 	GroupID: GroupRepo,
 	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, repos, err := loadRepos(cmd)
+		cfg, repos, filter, err := resolveBulkRepos(cmd, args)
 		if err != nil {
 			return err
 		}
 		if len(repos) == 0 {
 			return nil
 		}
-
-		filter := getFilter(cmd, args)
-		repos = filterByName(repos, filter)
 
 		type pushJob struct {
 			repo     config.Repo
@@ -65,35 +60,17 @@ var pushCmd = &cobra.Command{
 		}
 		fmt.Println()
 
-		if filter == "" {
-			ok, err := confirmAll(fmt.Sprintf("Push %d repositories?", len(jobs)), "Yes, push all")
-			if err != nil {
-				return err
-			}
-			if !ok {
-				return nil
-			}
+		ok, err := confirmBulkAction(filter, len(jobs), "Push %d repositories?", "Yes, push all")
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return nil
 		}
 
 		type result struct {
 			url string
 			err error
-		}
-		results := make([]result, len(jobs))
-		var wg sync.WaitGroup
-
-		action := func() {
-			for i, j := range jobs {
-				wg.Add(1)
-				go func(idx int, job pushJob) {
-					defer wg.Done()
-					results[idx] = result{
-						url: job.repo.URL,
-						err: repo.Push(job.fullPath),
-					}
-				}(i, j)
-			}
-			wg.Wait()
 		}
 
 		title := fmt.Sprintf("Pushing %d repositories...", len(jobs))
@@ -101,7 +78,13 @@ var pushCmd = &cobra.Command{
 			title = fmt.Sprintf("Pushing %s...", jobs[0].repo.URL)
 		}
 
-		if err := spinner.New().Title(title).Action(action).Run(); err != nil {
+		results, err := runParallelWithSpinner(jobs, title, func(job pushJob) result {
+			return result{
+				url: job.repo.URL,
+				err: repo.Push(job.fullPath),
+			}
+		})
+		if err != nil {
 			return err
 		}
 

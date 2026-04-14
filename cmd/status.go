@@ -2,25 +2,23 @@ package cmd
 
 import (
 	"fmt"
-	"sync"
 
 	"go-git-get/config"
 	"go-git-get/repo"
 	"go-git-get/ui"
 
-	"github.com/charmbracelet/huh/spinner"
 	"github.com/spf13/cobra"
 )
 
 type repoStatus struct {
-	url       string
-	cloned    bool
-	branch    string
-	dirty     bool
-	ahead     int
-	behind    int
-	err       error
-	pathErr   bool
+	url     string
+	cloned  bool
+	branch  string
+	dirty   bool
+	ahead   int
+	behind  int
+	err     error
+	pathErr bool
 }
 
 var statusCmd = &cobra.Command{
@@ -29,7 +27,7 @@ var statusCmd = &cobra.Command{
 	GroupID: GroupInfo,
 	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, repos, err := loadRepos(cmd)
+		cfg, repos, _, err := resolveBulkRepos(cmd, args)
 		if err != nil {
 			return err
 		}
@@ -37,40 +35,25 @@ var statusCmd = &cobra.Command{
 			return nil
 		}
 
-		repos = filterByName(repos, getFilter(cmd, args))
+		statuses, err := runParallelWithSpinner(repos, "Fetching status...", func(r config.Repo) repoStatus {
+			s := repoStatus{url: r.URL}
 
-		statuses := make([]repoStatus, len(repos))
-		var wg sync.WaitGroup
-
-		action := func() {
-			for i, r := range repos {
-				wg.Add(1)
-				go func(idx int, r config.Repo) {
-					defer wg.Done()
-					s := repoStatus{url: r.URL}
-
-					fullPath, err := repo.FullPath(cfg.BaseDir, r)
-					if err != nil {
-						s.pathErr = true
-						statuses[idx] = s
-						return
-					}
-
-					if !repo.IsCloned(fullPath) {
-						statuses[idx] = s
-						return
-					}
-					s.cloned = true
-					s.branch, _ = repo.CurrentBranch(fullPath)
-					s.dirty, _ = repo.IsDirty(fullPath)
-					s.ahead, s.behind, _ = repo.AheadBehind(fullPath)
-					statuses[idx] = s
-				}(i, r)
+			fullPath, err := repo.FullPath(cfg.BaseDir, r)
+			if err != nil {
+				s.pathErr = true
+				return s
 			}
-			wg.Wait()
-		}
 
-		if err := spinner.New().Title("Fetching status...").Action(action).Run(); err != nil {
+			if !repo.IsCloned(fullPath) {
+				return s
+			}
+			s.cloned = true
+			s.branch, _ = repo.CurrentBranch(fullPath)
+			s.dirty, _ = repo.IsDirty(fullPath)
+			s.ahead, s.behind, _ = repo.AheadBehind(fullPath)
+			return s
+		})
+		if err != nil {
 			return err
 		}
 

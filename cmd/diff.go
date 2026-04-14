@@ -15,7 +15,7 @@ var diffCmd = &cobra.Command{
 	GroupID: GroupRepo,
 	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, repos, err := loadRepos(cmd)
+		cfg, repos, filter, err := resolveBulkRepos(cmd, args)
 		if err != nil {
 			return err
 		}
@@ -23,20 +23,13 @@ var diffCmd = &cobra.Command{
 			return nil
 		}
 
-		filter := getFilter(cmd, args)
-		repos = filterByName(repos, filter)
-
-		if filter == "" {
-			ok, err := confirmAll(fmt.Sprintf("Show diff for all %d repositories?", len(repos)), "Yes, show all")
-			if err != nil {
-				return err
-			}
-			if !ok {
-				return nil
-			}
+		type diffEntry struct {
+			url     string
+			summary string
+			err     error
 		}
 
-		found := false
+		var entries []diffEntry
 		for _, r := range repos {
 			fullPath, err := repo.FullPath(cfg.BaseDir, r)
 			if err != nil {
@@ -51,18 +44,30 @@ var diffCmd = &cobra.Command{
 			}
 
 			summary, err := repo.DiffSummary(fullPath)
-			if err != nil {
-				fmt.Printf("  %s %s %s\n", ui.Error.Render("✗"), ui.Repo.Render(r.URL), ui.Error.Render(err.Error()))
+			entries = append(entries, diffEntry{url: r.URL, summary: summary, err: err})
+		}
+
+		if len(entries) == 0 {
+			fmt.Println(ui.Info.Render("All repositories are clean."))
+			return nil
+		}
+
+		ok, err := confirmBulkAction(filter, len(entries), "Show diff for %d repositories?", "Yes, show all")
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return nil
+		}
+
+		for _, entry := range entries {
+			if entry.err != nil {
+				fmt.Printf("  %s %s %s\n", ui.Error.Render("✗"), ui.Repo.Render(entry.url), ui.Error.Render(entry.err.Error()))
 				continue
 			}
 
-			found = true
-			fmt.Printf("\n  %s %s\n", ui.Repo.Render("●"), ui.Repo.Render(r.URL))
-			fmt.Printf("%s\n", summary)
-		}
-
-		if !found {
-			fmt.Println(ui.Info.Render("All repositories are clean."))
+			fmt.Printf("\n  %s %s\n", ui.Repo.Render("●"), ui.Repo.Render(entry.url))
+			fmt.Printf("%s\n", entry.summary)
 		}
 
 		return nil

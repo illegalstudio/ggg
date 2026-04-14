@@ -5,12 +5,14 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 
 	"go-git-get/config"
 	"go-git-get/repo"
 	"go-git-get/ui"
 
 	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/huh/spinner"
 	"github.com/spf13/cobra"
 )
 
@@ -64,6 +66,19 @@ func getFilter(cmd *cobra.Command, args []string) string {
 	return filter
 }
 
+// resolveBulkRepos loads config, applies --group and filter resolution, and
+// returns the final repo set plus the effective filter string.
+func resolveBulkRepos(cmd *cobra.Command, args []string) (*config.Config, []config.Repo, string, error) {
+	cfg, repos, err := loadRepos(cmd)
+	if err != nil || len(repos) == 0 {
+		return cfg, repos, "", err
+	}
+
+	filter := getFilter(cmd, args)
+	repos = filterByName(repos, filter)
+	return cfg, repos, filter, nil
+}
+
 // filterByName filters repos by substring match on URL, path, or derived path.
 func filterByName(repos []config.Repo, filter string) []config.Repo {
 	if filter == "" {
@@ -80,6 +95,98 @@ func filterByName(repos []config.Repo, filter string) []config.Repo {
 		}
 	}
 	return filtered
+}
+
+// resolveOneRepo returns a single repo using exact-match, partial-match, then
+// interactive disambiguation.
+func resolveOneRepo(repos []config.Repo, query string) (config.Repo, error) {
+	idx, err := resolveOneRepoIndex(repos, query)
+	if err != nil {
+		return config.Repo{}, err
+	}
+	return repos[idx], nil
+}
+
+// resolveOneRepoIndex returns the index of a single repo using exact-match,
+// partial-match, then interactive disambiguation.
+func resolveOneRepoIndex(repos []config.Repo, query string) (int, error) {
+	matches := matchRepoIndices(repos, query)
+	if len(matches) == 0 {
+		return -1, fmt.Errorf("repository %q not found in config", query)
+	}
+	if len(matches) == 1 {
+		return matches[0], nil
+	}
+
+	options := make([]huh.Option[int], len(matches))
+	for i, idx := range matches {
+		options[i] = huh.NewOption(repos[idx].URL, idx)
+	}
+
+	var choice int
+	err := huh.NewSelect[int]().
+		Title(fmt.Sprintf("Multiple repositories match %q", query)).
+		Options(options...).
+		Value(&choice).
+		Run()
+	if err != nil {
+		return -1, err
+	}
+
+	return choice, nil
+}
+
+func matchRepoIndices(repos []config.Repo, query string) []int {
+	// First pass: exact match.
+	for i, r := range repos {
+		derived, _ := repo.DerivePathFromURL(r.URL)
+		if r.Path == query || r.URL == query || derived == query {
+			return []int{i}
+		}
+	}
+
+	// Second pass: partial match (substring, case-insensitive).
+	queryLower := strings.ToLower(query)
+	var matches []int
+	for i, r := range repos {
+		derived, _ := repo.DerivePathFromURL(r.URL)
+		if strings.Contains(strings.ToLower(r.URL), queryLower) ||
+			strings.Contains(strings.ToLower(r.Path), queryLower) ||
+			strings.Contains(strings.ToLower(derived), queryLower) {
+			matches = append(matches, i)
+		}
+	}
+
+	return matches
+}
+
+func confirmBulkAction(filter string, count int, title, yesLabel string) (bool, error) {
+	if filter != "" {
+		return true, nil
+	}
+	return confirmAll(fmt.Sprintf(title, count), yesLabel)
+}
+
+func runParallelWithSpinner[T any, R any](jobs []T, title string, runner func(T) R) ([]R, error) {
+	results := make([]R, len(jobs))
+	var wg sync.WaitGroup
+
+	action := func() {
+		for i, job := range jobs {
+			wg.Add(1)
+			go func(idx int, job T) {
+				defer wg.Done()
+				results[idx] = runner(job)
+			}(i, job)
+		}
+		wg.Wait()
+	}
+
+	if err := spinner.New().Title(title).Action(action).Run(); err != nil {
+		return nil, err
+	}
+
+	return results, nil
 }
 
 // defaultEditor returns the user's preferred editor from $EDITOR, $VISUAL, or "vi".

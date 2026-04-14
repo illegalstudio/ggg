@@ -2,13 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"sync"
 
 	"go-git-get/config"
 	"go-git-get/repo"
 	"go-git-get/ui"
 
-	"github.com/charmbracelet/huh/spinner"
 	"github.com/spf13/cobra"
 )
 
@@ -18,25 +16,12 @@ var pullCmd = &cobra.Command{
 	GroupID: GroupRepo,
 	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, repos, err := loadRepos(cmd)
+		cfg, repos, filter, err := resolveBulkRepos(cmd, args)
 		if err != nil {
 			return err
 		}
 		if len(repos) == 0 {
 			return nil
-		}
-
-		filter := getFilter(cmd, args)
-		repos = filterByName(repos, filter)
-
-		if filter == "" {
-			ok, err := confirmAll(fmt.Sprintf("Pull %d repositories?", len(repos)), "Yes, pull all")
-			if err != nil {
-				return err
-			}
-			if !ok {
-				return nil
-			}
 		}
 
 		type pullJob struct {
@@ -75,20 +60,12 @@ var pullCmd = &cobra.Command{
 			return nil
 		}
 
-		// Pull in parallel with spinner
-		results := make([]result, len(jobs))
-		var wg sync.WaitGroup
-
-		action := func() {
-			for i, j := range jobs {
-				wg.Add(1)
-				go func(idx int, job pullJob) {
-					defer wg.Done()
-					err := repo.Pull(job.fullPath, job.strategy)
-					results[idx] = result{url: job.repo.URL, err: err}
-				}(i, j)
-			}
-			wg.Wait()
+		ok, err := confirmBulkAction(filter, len(jobs), "Pull %d repositories?", "Yes, pull all")
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return nil
 		}
 
 		title := fmt.Sprintf("Pulling %d repositories...", len(jobs))
@@ -96,7 +73,10 @@ var pullCmd = &cobra.Command{
 			title = fmt.Sprintf("Pulling %s...", jobs[0].repo.URL)
 		}
 
-		if err := spinner.New().Title(title).Action(action).Run(); err != nil {
+		results, err := runParallelWithSpinner(jobs, title, func(job pullJob) result {
+			return result{url: job.repo.URL, err: repo.Pull(job.fullPath, job.strategy)}
+		})
+		if err != nil {
 			return err
 		}
 

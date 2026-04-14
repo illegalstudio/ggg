@@ -32,11 +32,10 @@ Examples:
 			return err
 		}
 
-		repos, err := filterRepo(cfg.Repos, args[0])
+		r, err := resolveOneRepo(cfg.Repos, args[0])
 		if err != nil {
 			return err
 		}
-		r := repos[0]
 
 		fullPath, err := repo.FullPath(cfg.BaseDir, r)
 		if err != nil {

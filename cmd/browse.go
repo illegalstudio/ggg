@@ -24,12 +24,12 @@ var browseCmd = &cobra.Command{
 			return err
 		}
 
-		repos, err := filterRepo(cfg.Repos, args[0])
+		r, err := resolveOneRepo(cfg.Repos, args[0])
 		if err != nil {
 			return err
 		}
 
-		browseURL := httpURL(repos[0].URL)
+		browseURL := httpURL(r.URL)
 		fmt.Printf("  %s Opening %s\n", ui.Info.Render("●"), ui.Repo.Render(browseURL))
 		return openBrowser(browseURL)
 	},

@@ -49,98 +49,98 @@ func TestFilterByGroup_NoMatch(t *testing.T) {
 	}
 }
 
-func TestFilterRepo_ExactMatch_URL(t *testing.T) {
+func TestResolveOneRepo_ExactMatch_URL(t *testing.T) {
 	repos := []config.Repo{
 		{URL: "git@github.com:user/alpha.git"},
 		{URL: "git@github.com:user/beta.git"},
 	}
 
-	result, err := filterRepo(repos, "git@github.com:user/beta.git")
+	result, err := resolveOneRepo(repos, "git@github.com:user/beta.git")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(result) != 1 || result[0].URL != "git@github.com:user/beta.git" {
+	if result.URL != "git@github.com:user/beta.git" {
 		t.Errorf("expected beta.git, got %v", result)
 	}
 }
 
-func TestFilterRepo_ExactMatch_Path(t *testing.T) {
+func TestResolveOneRepo_ExactMatch_Path(t *testing.T) {
 	repos := []config.Repo{
 		{URL: "git@github.com:user/alpha.git", Path: "my/alpha"},
 		{URL: "git@github.com:user/beta.git"},
 	}
 
-	result, err := filterRepo(repos, "my/alpha")
+	result, err := resolveOneRepo(repos, "my/alpha")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(result) != 1 || result[0].URL != "git@github.com:user/alpha.git" {
+	if result.URL != "git@github.com:user/alpha.git" {
 		t.Errorf("expected alpha.git, got %v", result)
 	}
 }
 
-func TestFilterRepo_ExactMatch_Derived(t *testing.T) {
+func TestResolveOneRepo_ExactMatch_Derived(t *testing.T) {
 	repos := []config.Repo{
 		{URL: "git@github.com:user/myrepo.git"},
 	}
 
-	result, err := filterRepo(repos, "user/myrepo")
+	result, err := resolveOneRepo(repos, "user/myrepo")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(result) != 1 {
-		t.Errorf("expected 1 result, got %d", len(result))
+	if result.URL != "git@github.com:user/myrepo.git" {
+		t.Errorf("unexpected repo: %+v", result)
 	}
 }
 
-func TestFilterRepo_PartialMatch(t *testing.T) {
+func TestResolveOneRepo_PartialMatch(t *testing.T) {
 	repos := []config.Repo{
 		{URL: "git@github.com:user/elephc.git"},
 		{URL: "git@github.com:user/other.git"},
 	}
 
-	result, err := filterRepo(repos, "eleph")
+	result, err := resolveOneRepo(repos, "eleph")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(result) != 1 || result[0].URL != "git@github.com:user/elephc.git" {
+	if result.URL != "git@github.com:user/elephc.git" {
 		t.Errorf("expected elephc.git, got %v", result)
 	}
 }
 
-func TestFilterRepo_PartialMatch_CaseInsensitive(t *testing.T) {
+func TestResolveOneRepo_PartialMatch_CaseInsensitive(t *testing.T) {
 	repos := []config.Repo{
 		{URL: "git@github.com:user/MyProject.git"},
 		{URL: "git@github.com:user/other.git"},
 	}
 
-	result, err := filterRepo(repos, "myproject")
+	result, err := resolveOneRepo(repos, "myproject")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(result) != 1 || result[0].URL != "git@github.com:user/MyProject.git" {
+	if result.URL != "git@github.com:user/MyProject.git" {
 		t.Errorf("expected MyProject.git, got %v", result)
 	}
 }
 
-func TestFilterRepo_NotFound(t *testing.T) {
+func TestResolveOneRepo_NotFound(t *testing.T) {
 	repos := []config.Repo{
 		{URL: "git@github.com:user/alpha.git"},
 	}
 
-	_, err := filterRepo(repos, "nonexistent")
+	_, err := resolveOneRepo(repos, "nonexistent")
 	if err == nil {
 		t.Error("expected error for nonexistent repo")
 	}
 }
 
-func TestFindRepoIndex_ExactMatch(t *testing.T) {
+func TestResolveOneRepoIndex_ExactMatch(t *testing.T) {
 	repos := []config.Repo{
 		{URL: "git@github.com:user/alpha.git"},
 		{URL: "git@github.com:user/beta.git"},
 	}
 
-	idx, err := findRepoIndex(repos, "git@github.com:user/beta.git")
+	idx, err := resolveOneRepoIndex(repos, "git@github.com:user/beta.git")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,13 +149,13 @@ func TestFindRepoIndex_ExactMatch(t *testing.T) {
 	}
 }
 
-func TestFindRepoIndex_PartialMatch(t *testing.T) {
+func TestResolveOneRepoIndex_PartialMatch(t *testing.T) {
 	repos := []config.Repo{
 		{URL: "git@github.com:user/alpha.git"},
 		{URL: "git@github.com:user/beta.git"},
 	}
 
-	idx, err := findRepoIndex(repos, "beta")
+	idx, err := resolveOneRepoIndex(repos, "beta")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -164,12 +164,12 @@ func TestFindRepoIndex_PartialMatch(t *testing.T) {
 	}
 }
 
-func TestFindRepoIndex_NotFound(t *testing.T) {
+func TestResolveOneRepoIndex_NotFound(t *testing.T) {
 	repos := []config.Repo{
 		{URL: "git@github.com:user/alpha.git"},
 	}
 
-	_, err := findRepoIndex(repos, "zzz")
+	_, err := resolveOneRepoIndex(repos, "zzz")
 	if err == nil {
 		t.Error("expected error for nonexistent repo")
 	}

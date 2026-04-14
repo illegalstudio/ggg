@@ -2,13 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"sync"
 
 	"go-git-get/config"
 	"go-git-get/repo"
 	"go-git-get/ui"
 
-	"github.com/charmbracelet/huh/spinner"
 	"github.com/spf13/cobra"
 )
 
@@ -28,21 +26,8 @@ var checkoutCmd = &cobra.Command{
 			return nil
 		}
 
-		filter, _ := cmd.Flags().GetString("filter")
-		if filter == "" && len(args) > 1 {
-			filter = args[1]
-		}
+		filter := getFilter(cmd, args[1:])
 		repos = filterByName(repos, filter)
-
-		if filter == "" {
-			ok, err := confirmAll(fmt.Sprintf("Checkout branch %q in all %d repositories?", branch, len(repos)), "Yes, checkout all")
-			if err != nil {
-				return err
-			}
-			if !ok {
-				return nil
-			}
-		}
 
 		type checkoutJob struct {
 			repo     config.Repo
@@ -69,25 +54,17 @@ var checkoutCmd = &cobra.Command{
 			return nil
 		}
 
+		ok, err := confirmBulkAction(filter, len(jobs), fmt.Sprintf("Checkout branch %q in %%d repositories?", branch), "Yes, checkout all")
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return nil
+		}
+
 		type result struct {
 			url string
 			err error
-		}
-		results := make([]result, len(jobs))
-		var wg sync.WaitGroup
-
-		action := func() {
-			for i, j := range jobs {
-				wg.Add(1)
-				go func(idx int, job checkoutJob) {
-					defer wg.Done()
-					results[idx] = result{
-						url: job.repo.URL,
-						err: repo.Checkout(job.fullPath, branch),
-					}
-				}(i, j)
-			}
-			wg.Wait()
 		}
 
 		title := fmt.Sprintf("Checking out %q in %d repositories...", branch, len(jobs))
@@ -95,7 +72,13 @@ var checkoutCmd = &cobra.Command{
 			title = fmt.Sprintf("Checking out %q in %s...", branch, jobs[0].repo.URL)
 		}
 
-		if err := spinner.New().Title(title).Action(action).Run(); err != nil {
+		results, err := runParallelWithSpinner(jobs, title, func(job checkoutJob) result {
+			return result{
+				url: job.repo.URL,
+				err: repo.Checkout(job.fullPath, branch),
+			}
+		})
+		if err != nil {
 			return err
 		}
 

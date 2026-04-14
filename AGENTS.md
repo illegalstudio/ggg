@@ -38,11 +38,11 @@ ui/              → Shared lipgloss styles for terminal output
 - **Commands**: Each command lives in its own file under `cmd/` (e.g. `cmd/clone.go`) and registers itself via `func init() { rootCmd.AddCommand(...) }`
 - **Command grouping**: Use the root command group IDs (`GroupConfig`, `GroupRepo`, `GroupInfo`) so help output stays organized
 - **Shared logic**:
-  - `loadRepos`, `confirmAll`, `getFilter`, `filterByName`, `defaultEditor`, `requireBinary` live in `cmd/helpers.go`
-  - `filterRepo` in `cmd/clone.go` implements exact match, partial match, then interactive disambiguation for single-repo commands
-  - `findRepoIndex` in `cmd/remove.go` mirrors that behavior when mutating config entries
-- **Filtering model**: Bulk commands typically use `loadRepos()` + `getFilter()` + `filterByName()`. Single-target commands (`cd`, `open`, `browse`, `remove`) use the exact/partial/interactive matching flow.
+  - `loadRepos`, `resolveBulkRepos`, `confirmAll`, `confirmBulkAction`, `getFilter`, `filterByName`, `resolveOneRepo`, `resolveOneRepoIndex`, `runParallelWithSpinner`, `defaultEditor`, `requireBinary` live in `cmd/helpers.go`
+  - Single-target commands (`cd`, `open`, `browse`, `remove`) share the same exact-match / partial-match / interactive disambiguation flow via `resolveOneRepo*`
+- **Filtering model**: Bulk commands should prefer `resolveBulkRepos()` so group filtering, positional `filter`, and `--filter` stay consistent across commands. Single-target commands should prefer `resolveOneRepo()` / `resolveOneRepoIndex()`.
 - **Parallelism**: I/O-heavy operations (clone, pull, push, fetch, stash, checkout, status checks, remote reachability checks) run in parallel goroutines with `sync.WaitGroup`, wrapped in a `huh/spinner`
+- **Bulk command contract**: Multi-repo commands should be structured as: resolve targets, build actionable jobs, optionally confirm, run with `runParallelWithSpinner()` when appropriate, then render results
 - **Git calls**: Use quiet git flags where the command supports them; capture stdout only when output is the actual data being parsed or displayed
 - **UI output**: Normal command output is usually `fmt.Print*` combined with styles from `ui/styles.go`; fatal errors are generally returned to Cobra rather than printed inline
 - **Interactive flows**: `huh` is used not only for confirmation prompts, but also for repo disambiguation, import multi-select, export path input, and validate cleanup

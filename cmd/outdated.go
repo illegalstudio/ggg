@@ -2,13 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"sync"
 
 	"go-git-get/config"
 	"go-git-get/repo"
 	"go-git-get/ui"
 
-	"github.com/charmbracelet/huh/spinner"
 	"github.com/spf13/cobra"
 )
 
@@ -26,7 +24,7 @@ var outdatedCmd = &cobra.Command{
 	GroupID: GroupInfo,
 	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, repos, err := loadRepos(cmd)
+		cfg, repos, _, err := resolveBulkRepos(cmd, args)
 		if err != nil {
 			return err
 		}
@@ -34,47 +32,31 @@ var outdatedCmd = &cobra.Command{
 			return nil
 		}
 
-		repos = filterByName(repos, getFilter(cmd, args))
+		results, err := runParallelWithSpinner(repos, "Fetching from remotes...", func(r config.Repo) outdatedResult {
+			res := outdatedResult{url: r.URL}
 
-		results := make([]outdatedResult, len(repos))
-		var wg sync.WaitGroup
-
-		action := func() {
-			for i, r := range repos {
-				wg.Add(1)
-				go func(idx int, r config.Repo) {
-					defer wg.Done()
-					res := outdatedResult{url: r.URL}
-
-					fullPath, err := repo.FullPath(cfg.BaseDir, r)
-					if err != nil {
-						res.err = err
-						results[idx] = res
-						return
-					}
-
-					if !repo.IsCloned(fullPath) {
-						res.skip = "not_cloned"
-						results[idx] = res
-						return
-					}
-
-					if err := repo.Fetch(fullPath); err != nil {
-						res.skip = "fetch_err"
-						res.err = err
-						results[idx] = res
-						return
-					}
-
-					res.branch, _ = repo.CurrentBranch(fullPath)
-					_, res.behind, _ = repo.AheadBehind(fullPath)
-					results[idx] = res
-				}(i, r)
+			fullPath, err := repo.FullPath(cfg.BaseDir, r)
+			if err != nil {
+				res.err = err
+				return res
 			}
-			wg.Wait()
-		}
 
-		if err := spinner.New().Title("Fetching from remotes...").Action(action).Run(); err != nil {
+			if !repo.IsCloned(fullPath) {
+				res.skip = "not_cloned"
+				return res
+			}
+
+			if err := repo.Fetch(fullPath); err != nil {
+				res.skip = "fetch_err"
+				res.err = err
+				return res
+			}
+
+			res.branch, _ = repo.CurrentBranch(fullPath)
+			_, res.behind, _ = repo.AheadBehind(fullPath)
+			return res
+		})
+		if err != nil {
 			return err
 		}
 

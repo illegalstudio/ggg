@@ -2,15 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
-	"sync"
 
 	"go-git-get/config"
 	"go-git-get/repo"
 	"go-git-get/ui"
 
-	"github.com/charmbracelet/huh"
-	"github.com/charmbracelet/huh/spinner"
 	"github.com/spf13/cobra"
 )
 
@@ -20,25 +16,12 @@ var cloneCmd = &cobra.Command{
 	GroupID: GroupRepo,
 	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, repos, err := loadRepos(cmd)
+		cfg, repos, filter, err := resolveBulkRepos(cmd, args)
 		if err != nil {
 			return err
 		}
 		if len(repos) == 0 {
 			return nil
-		}
-
-		filter := getFilter(cmd, args)
-		repos = filterByName(repos, filter)
-
-		if filter == "" {
-			ok, err := confirmAll(fmt.Sprintf("Clone all %d repositories?", len(repos)), "Yes, clone all")
-			if err != nil {
-				return err
-			}
-			if !ok {
-				return nil
-			}
 		}
 
 		// Separate already cloned from pending
@@ -64,28 +47,18 @@ var cloneCmd = &cobra.Command{
 			return nil
 		}
 
-		// Clone in parallel with spinner
+		ok, err := confirmBulkAction(filter, len(jobs), "Clone %d repositories?", "Yes, clone all")
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return nil
+		}
+
 		type result struct {
 			url  string
 			path string
 			err  error
-		}
-		results := make([]result, len(jobs))
-		var wg sync.WaitGroup
-
-		action := func() {
-			for i, j := range jobs {
-				wg.Add(1)
-				go func(idx int, job cloneJob) {
-					defer wg.Done()
-					results[idx] = result{
-						url:  job.repo.URL,
-						path: job.fullPath,
-						err:  repo.Clone(job.repo.URL, job.fullPath),
-					}
-				}(i, j)
-			}
-			wg.Wait()
 		}
 
 		title := fmt.Sprintf("Cloning %d repositories...", len(jobs))
@@ -93,7 +66,14 @@ var cloneCmd = &cobra.Command{
 			title = fmt.Sprintf("Cloning %s...", jobs[0].repo.URL)
 		}
 
-		if err := spinner.New().Title(title).Action(action).Run(); err != nil {
+		results, err := runParallelWithSpinner(jobs, title, func(job cloneJob) result {
+			return result{
+				url:  job.repo.URL,
+				path: job.fullPath,
+				err:  repo.Clone(job.repo.URL, job.fullPath),
+			}
+		})
+		if err != nil {
 			return err
 		}
 
@@ -108,53 +88,6 @@ var cloneCmd = &cobra.Command{
 		}
 		return nil
 	},
-}
-
-func filterRepo(repos []config.Repo, name string) ([]config.Repo, error) {
-	// First pass: exact match
-	for _, r := range repos {
-		derived, _ := repo.DerivePathFromURL(r.URL)
-		if r.Path == name || r.URL == name || derived == name {
-			return []config.Repo{r}, nil
-		}
-	}
-
-	// Second pass: partial match (substring, case-insensitive)
-	nameLower := strings.ToLower(name)
-	var matches []config.Repo
-	for _, r := range repos {
-		derived, _ := repo.DerivePathFromURL(r.URL)
-		if strings.Contains(strings.ToLower(r.URL), nameLower) ||
-			strings.Contains(strings.ToLower(r.Path), nameLower) ||
-			strings.Contains(strings.ToLower(derived), nameLower) {
-			matches = append(matches, r)
-		}
-	}
-
-	if len(matches) == 0 {
-		return nil, fmt.Errorf("repository %q not found in config", name)
-	}
-	if len(matches) == 1 {
-		return matches, nil
-	}
-
-	// Multiple matches: prompt user to choose via huh select
-	options := make([]huh.Option[int], len(matches))
-	for i, r := range matches {
-		options[i] = huh.NewOption(r.URL, i)
-	}
-
-	var choice int
-	err := huh.NewSelect[int]().
-		Title(fmt.Sprintf("Multiple repositories match %q", name)).
-		Options(options...).
-		Value(&choice).
-		Run()
-	if err != nil {
-		return nil, err
-	}
-
-	return []config.Repo{matches[choice]}, nil
 }
 
 func init() {

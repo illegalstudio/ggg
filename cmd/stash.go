@@ -2,13 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"sync"
 
 	"go-git-get/config"
 	"go-git-get/repo"
 	"go-git-get/ui"
 
-	"github.com/charmbracelet/huh/spinner"
 	"github.com/spf13/cobra"
 )
 
@@ -18,25 +16,12 @@ var stashCmd = &cobra.Command{
 	GroupID: GroupRepo,
 	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, repos, err := loadRepos(cmd)
+		cfg, repos, filter, err := resolveBulkRepos(cmd, args)
 		if err != nil {
 			return err
 		}
 		if len(repos) == 0 {
 			return nil
-		}
-
-		filter := getFilter(cmd, args)
-		repos = filterByName(repos, filter)
-
-		if filter == "" {
-			ok, err := confirmAll(fmt.Sprintf("Stash changes in all %d repositories?", len(repos)), "Yes, stash all")
-			if err != nil {
-				return err
-			}
-			if !ok {
-				return nil
-			}
 		}
 
 		type stashJob struct {
@@ -65,25 +50,17 @@ var stashCmd = &cobra.Command{
 			return nil
 		}
 
+		ok, err := confirmBulkAction(filter, len(jobs), "Stash changes in %d repositories?", "Yes, stash all")
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return nil
+		}
+
 		type result struct {
 			url string
 			err error
-		}
-		results := make([]result, len(jobs))
-		var wg sync.WaitGroup
-
-		action := func() {
-			for i, j := range jobs {
-				wg.Add(1)
-				go func(idx int, job stashJob) {
-					defer wg.Done()
-					results[idx] = result{
-						url: job.repo.URL,
-						err: repo.Stash(job.fullPath),
-					}
-				}(i, j)
-			}
-			wg.Wait()
 		}
 
 		title := fmt.Sprintf("Stashing %d repositories...", len(jobs))
@@ -91,7 +68,13 @@ var stashCmd = &cobra.Command{
 			title = fmt.Sprintf("Stashing %s...", jobs[0].repo.URL)
 		}
 
-		if err := spinner.New().Title(title).Action(action).Run(); err != nil {
+		results, err := runParallelWithSpinner(jobs, title, func(job stashJob) result {
+			return result{
+				url: job.repo.URL,
+				err: repo.Stash(job.fullPath),
+			}
+		})
+		if err != nil {
 			return err
 		}
 

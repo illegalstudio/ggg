@@ -13,19 +13,19 @@ var cdCmd = &cobra.Command{
 	Use:     "cd <name>",
 	Short:   "Print the path of a repository (use ggg shell-init for seamless cd)",
 	GroupID: GroupRepo,
-	Args:  cobra.ExactArgs(1),
+	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Load()
 		if err != nil {
 			return err
 		}
 
-		repos, err := filterRepo(cfg.Repos, args[0])
+		r, err := resolveOneRepo(cfg.Repos, args[0])
 		if err != nil {
 			return err
 		}
 
-		fullPath, err := repo.FullPath(cfg.BaseDir, repos[0])
+		fullPath, err := repo.FullPath(cfg.BaseDir, r)
 		if err != nil {
 			return err
 		}
