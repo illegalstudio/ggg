@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -49,6 +50,10 @@ func httpURL(rawURL string) string {
 }
 
 func openBrowser(url string) error {
+	if override := strings.TrimSpace(os.Getenv("GGG_TEST_BROWSER_CMD")); override != "" {
+		return exec.Command(override, url).Run()
+	}
+
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "darwin":

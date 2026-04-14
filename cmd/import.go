@@ -3,8 +3,10 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"sort"
+	"strconv"
 	"strings"
 
 	"go-git-get/config"
@@ -194,6 +196,10 @@ func fetchRepos(account string) ([]ghRepo, error) {
 }
 
 func selectRepos(repos []ghRepo) ([]ghRepo, error) {
+	if selected, ok, err := selectReposFromEnv(repos); ok || err != nil {
+		return selected, err
+	}
+
 	options := make([]huh.Option[int], len(repos))
 	for i, r := range repos {
 		label := r.FullName
@@ -221,6 +227,49 @@ func selectRepos(repos []ghRepo) ([]ghRepo, error) {
 		result[i] = repos[idx]
 	}
 	return result, nil
+}
+
+func selectReposFromEnv(repos []ghRepo) ([]ghRepo, bool, error) {
+	raw := strings.TrimSpace(os.Getenv("GGG_TEST_IMPORT_SELECTION"))
+	if raw == "" {
+		return nil, false, nil
+	}
+
+	if raw == "*" || strings.EqualFold(raw, "all") {
+		return repos, true, nil
+	}
+
+	parts := strings.Split(raw, ",")
+	selected := make([]ghRepo, 0, len(parts))
+
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+
+		if idx, err := strconv.Atoi(part); err == nil {
+			if idx < 0 || idx >= len(repos) {
+				return nil, true, fmt.Errorf("test import selection index %d out of range", idx)
+			}
+			selected = append(selected, repos[idx])
+			continue
+		}
+
+		matched := false
+		for _, r := range repos {
+			if r.FullName == part {
+				selected = append(selected, r)
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			return nil, true, fmt.Errorf("test import selection %q not found", part)
+		}
+	}
+
+	return selected, true, nil
 }
 
 func init() {

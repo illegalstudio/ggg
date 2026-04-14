@@ -59,11 +59,12 @@ ui/              → Shared lipgloss styles for terminal output
   - `internal/testutil/` contains shared hermetic test helpers and should be preferred over ad-hoc env setup in individual tests
 - **Test helpers**: `initTestRepo(t)` in `repo/repo_test.go` creates a temporary git repo with one commit
 - **Git test caveat**: `repo/` tests shell out to the real `git` binary. If the developer machine has global commit signing, hooks, or SSH-based signing enabled, `initTestRepo` can fail during `git commit`. Prefer disabling signing for the test process or neutralizing global git config when adjusting those tests.
+- **External command tests**: Browser/editor/GitHub CLI flows are covered in `tests/` using local stub executables and hermetic environment variables instead of real external apps or network calls
 - **Coverage areas**:
   - `repo/`: URL parsing, path derivation, git operations (clone, branch, dirty, ahead/behind)
   - `config/`: Write, save/load roundtrip, path validation
   - `cmd/`: filterRepo (exact, partial, case-insensitive), filterByGroup, findRepoIndex, URL-to-browser conversion
-  - `tests/`: binary-level flows such as `init`, `shell-init`, config mutation, validation, and `cd`
+  - `tests/`: binary-level flows such as `init`, `shell-init`, add/remove/list, export, clone, status, outdated, pull, push, diff, stash, checkout, open, browse, doctor, import, and `cd`
 - **Convention**: Use table-driven tests for functions with multiple input/output cases; use `t.TempDir()` for filesystem tests
 
 ## Documentation

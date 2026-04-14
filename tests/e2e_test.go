@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -50,10 +51,10 @@ func TestCLIAddListValidateRemove(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testutil.WriteConfig(t, home, `
-base_dir: ~/Developer
+	writeConfig(t, home, fmt.Sprintf(`
+base_dir: %s
 repos: []
-`)
+`, filepath.ToSlash(baseDir)))
 
 	out, err := runGGG(t, home, "add", "git@github.com:acme/one.git", "--group", "work")
 	if err != nil {
@@ -105,7 +106,7 @@ func TestCLICDPrintsResolvedPath(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testutil.WriteConfig(t, home, `
+	writeConfig(t, home, `
 base_dir: ~/Developer
 repos:
   - url: git@github.com:acme/project.git
@@ -117,6 +118,365 @@ repos:
 	}
 	if strings.TrimSpace(out) != repoDir {
 		t.Fatalf("cd output = %q, want %q", strings.TrimSpace(out), repoDir)
+	}
+}
+
+func TestCLIExportCopiesConfig(t *testing.T) {
+	home := testutil.SetupHome(t)
+	writeConfig(t, home, `
+base_dir: ~/Developer
+repos:
+  - url: git@github.com:acme/exported.git
+    group: work
+`)
+
+	destDir := t.TempDir()
+	out, err := runGGG(t, home, "export", destDir)
+	if err != nil {
+		t.Fatalf("ggg export failed: %v\n%s", err, out)
+	}
+
+	exportedPath := filepath.Join(destDir, "repositories.yaml")
+	data, err := os.ReadFile(exportedPath)
+	if err != nil {
+		t.Fatalf("read exported config: %v", err)
+	}
+	if !strings.Contains(string(data), "git@github.com:acme/exported.git") {
+		t.Fatalf("exported config missing repo:\n%s", data)
+	}
+}
+
+func TestCLIGitFlowCloneStatusDiffStashCheckout(t *testing.T) {
+	home := testutil.SetupHome(t)
+	baseDir := filepath.Join(home, "Developer")
+	if err := os.MkdirAll(baseDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	_, remoteOne := createRemoteRepo(t, home)
+	_, remoteTwo := createRemoteRepo(t, home)
+
+	writeConfig(t, home, fmt.Sprintf(`
+base_dir: %s
+repos:
+  - url: %s
+    path: team/demo
+  - url: %s
+    path: team/uncloned
+`, filepath.ToSlash(baseDir), filepath.ToSlash(remoteOne), filepath.ToSlash(remoteTwo)))
+
+	out, err := runGGG(t, home, "clone", "demo")
+	if err != nil {
+		t.Fatalf("ggg clone failed: %v\n%s", err, out)
+	}
+
+	clonedPath := filepath.Join(baseDir, "team", "demo")
+	if _, err := os.Stat(clonedPath); err != nil {
+		t.Fatalf("cloned repo missing: %v", err)
+	}
+
+	out, err = runGGG(t, home, "status")
+	if err != nil {
+		t.Fatalf("ggg status failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "(not cloned)") {
+		t.Fatalf("status output missing not cloned repo:\n%s", out)
+	}
+	if !strings.Contains(out, "[main]") || !strings.Contains(out, "clean") {
+		t.Fatalf("status output missing cloned repo state:\n%s", out)
+	}
+
+	testutil.WriteFile(t, clonedPath, "README.md", "# dirty\n")
+
+	out, err = runGGG(t, home, "status", "demo")
+	if err != nil {
+		t.Fatalf("ggg status dirty failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "dirty") {
+		t.Fatalf("status output missing dirty state:\n%s", out)
+	}
+
+	out, err = runGGG(t, home, "diff", "demo")
+	if err != nil {
+		t.Fatalf("ggg diff failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "README.md") {
+		t.Fatalf("diff output missing changed file:\n%s", out)
+	}
+
+	out, err = runGGG(t, home, "stash", "demo")
+	if err != nil {
+		t.Fatalf("ggg stash failed: %v\n%s", err, out)
+	}
+
+	out, err = runGGG(t, home, "status", "demo")
+	if err != nil {
+		t.Fatalf("ggg status after stash failed: %v\n%s", err, out)
+	}
+	if strings.Contains(out, "dirty") || !strings.Contains(out, "clean") {
+		t.Fatalf("status should be clean after stash:\n%s", out)
+	}
+
+	testutil.RunGit(t, clonedPath, home, "branch", "feature")
+
+	out, err = runGGG(t, home, "checkout", "feature", "demo")
+	if err != nil {
+		t.Fatalf("ggg checkout failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "feature") {
+		t.Fatalf("checkout output missing branch:\n%s", out)
+	}
+
+	branch := testutil.RunGit(t, clonedPath, home, "rev-parse", "--abbrev-ref", "HEAD")
+	if branch != "feature" {
+		t.Fatalf("current branch = %q, want feature", branch)
+	}
+}
+
+func TestCLIOutdatedAndPull(t *testing.T) {
+	home := testutil.SetupHome(t)
+	baseDir := filepath.Join(home, "Developer")
+	if err := os.MkdirAll(baseDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	seedRepo, remote := createRemoteRepo(t, home)
+
+	writeConfig(t, home, fmt.Sprintf(`
+base_dir: %s
+repos:
+  - url: %s
+    path: team/pull-demo
+`, filepath.ToSlash(baseDir), filepath.ToSlash(remote)))
+
+	out, err := runGGG(t, home, "clone", "pull-demo")
+	if err != nil {
+		t.Fatalf("ggg clone failed: %v\n%s", err, out)
+	}
+
+	testutil.CommitFile(t, home, seedRepo, "README.md", "# updated\n", "update readme")
+	testutil.RunGit(t, seedRepo, home, "push", "origin", "main")
+
+	out, err = runGGG(t, home, "outdated", "pull-demo")
+	if err != nil {
+		t.Fatalf("ggg outdated failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "1 commits behind") {
+		t.Fatalf("outdated output missing behind count:\n%s", out)
+	}
+
+	out, err = runGGG(t, home, "pull", "pull-demo")
+	if err != nil {
+		t.Fatalf("ggg pull failed: %v\n%s", err, out)
+	}
+
+	clonedPath := filepath.Join(baseDir, "team", "pull-demo")
+	if got := testutil.ReadFile(t, clonedPath, "README.md"); got != "# updated\n" {
+		t.Fatalf("cloned README not updated after pull: %q", got)
+	}
+
+	out, err = runGGG(t, home, "outdated", "pull-demo")
+	if err != nil {
+		t.Fatalf("ggg outdated after pull failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "All repositories are up to date.") {
+		t.Fatalf("unexpected outdated output after pull:\n%s", out)
+	}
+}
+
+func TestCLIPush(t *testing.T) {
+	home := testutil.SetupHome(t)
+	baseDir := filepath.Join(home, "Developer")
+	if err := os.MkdirAll(baseDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	seedRepo, remote := createRemoteRepo(t, home)
+
+	writeConfig(t, home, fmt.Sprintf(`
+base_dir: %s
+repos:
+  - url: %s
+    path: team/push-demo
+`, filepath.ToSlash(baseDir), filepath.ToSlash(remote)))
+
+	out, err := runGGG(t, home, "clone", "push-demo")
+	if err != nil {
+		t.Fatalf("ggg clone failed: %v\n%s", err, out)
+	}
+
+	clonedPath := filepath.Join(baseDir, "team", "push-demo")
+	testutil.CommitFile(t, home, clonedPath, "README.md", "# pushed\n", "push change")
+	localHead := testutil.RunGit(t, clonedPath, home, "rev-parse", "HEAD")
+
+	out, err = runGGG(t, home, "push", "push-demo")
+	if err != nil {
+		t.Fatalf("ggg push failed: %v\n%s", err, out)
+	}
+
+	testutil.RunGit(t, seedRepo, home, "fetch", "origin")
+	remoteHead := testutil.RunGit(t, seedRepo, home, "rev-parse", "origin/main")
+	if remoteHead != localHead {
+		t.Fatalf("remote head = %q, want %q", remoteHead, localHead)
+	}
+}
+
+func TestCLIConfigAndOpenUseEditor(t *testing.T) {
+	home := testutil.SetupHome(t)
+	baseDir := filepath.Join(home, "Developer")
+	if err := os.MkdirAll(baseDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	_, remote := createRemoteRepo(t, home)
+	writeConfig(t, home, fmt.Sprintf(`
+base_dir: %s
+repos:
+  - url: %s
+    path: team/editor-target
+`, filepath.ToSlash(baseDir), filepath.ToSlash(remote)))
+
+	out, err := runGGG(t, home, "clone", "editor-target")
+	if err != nil {
+		t.Fatalf("ggg clone failed: %v\n%s", err, out)
+	}
+
+	stubDir := t.TempDir()
+	logPath := filepath.Join(stubDir, "editor.log")
+	editorPath := testutil.WriteStubCommand(t, stubDir, "fake-editor", logPath, "")
+
+	t.Setenv("EDITOR", editorPath)
+
+	out, err = runGGG(t, home, "config")
+	if err != nil {
+		t.Fatalf("ggg config failed: %v\n%s", err, out)
+	}
+
+	out, err = runGGG(t, home, "open", "editor-target", editorPath)
+	if err != nil {
+		t.Fatalf("ggg open failed: %v\n%s", err, out)
+	}
+
+	logData, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("read editor log: %v", err)
+	}
+
+	log := string(logData)
+	if !strings.Contains(log, testutil.ConfigPath(home)) {
+		t.Fatalf("config command did not invoke editor with config path:\n%s", log)
+	}
+	if !strings.Contains(log, filepath.Join(baseDir, "team", "editor-target")) {
+		t.Fatalf("open command did not invoke editor with repo path:\n%s", log)
+	}
+}
+
+func TestCLIBrowseUsesBrowserOverride(t *testing.T) {
+	home := testutil.SetupHome(t)
+	writeConfig(t, home, `
+base_dir: ~/Developer
+repos:
+  - url: git@github.com:acme/browse-demo.git
+`)
+
+	stubDir := t.TempDir()
+	logPath := filepath.Join(stubDir, "browser.log")
+	browserPath := testutil.WriteStubCommand(t, stubDir, "fake-browser", logPath, "")
+
+	t.Setenv("GGG_TEST_BROWSER_CMD", browserPath)
+
+	out, err := runGGG(t, home, "browse", "browse-demo")
+	if err != nil {
+		t.Fatalf("ggg browse failed: %v\n%s", err, out)
+	}
+
+	logData, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("read browser log: %v", err)
+	}
+
+	if got := strings.TrimSpace(string(logData)); got != "https://github.com/acme/browse-demo" {
+		t.Fatalf("browser called with %q", got)
+	}
+}
+
+func TestCLIDoctorReportsRemoteHealth(t *testing.T) {
+	home := testutil.SetupHome(t)
+	baseDir := filepath.Join(home, "Developer")
+	if err := os.MkdirAll(baseDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	_, remote := createRemoteRepo(t, home)
+	missing := filepath.Join(t.TempDir(), "missing.git")
+
+	writeConfig(t, home, fmt.Sprintf(`
+base_dir: %s
+repos:
+  - url: %s
+    path: team/reachable
+  - url: %s
+    path: team/missing
+`, filepath.ToSlash(baseDir), filepath.ToSlash(remote), filepath.ToSlash(missing)))
+
+	out, err := runGGG(t, home, "doctor")
+	if err != nil {
+		t.Fatalf("ggg doctor failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "2 configured") {
+		t.Fatalf("doctor output missing repo count:\n%s", out)
+	}
+	if !strings.Contains(out, "1 unreachable") {
+		t.Fatalf("doctor output missing unreachable remote count:\n%s", out)
+	}
+	if !strings.Contains(out, missing) {
+		t.Fatalf("doctor output missing unreachable remote details:\n%s", out)
+	}
+}
+
+func TestCLIImportWithStubGH(t *testing.T) {
+	home := testutil.SetupHome(t)
+	writeConfig(t, home, `
+base_dir: ~/Developer
+repos: []
+`)
+
+	stubDir := t.TempDir()
+	logPath := filepath.Join(stubDir, "gh.log")
+	testutil.PrependPath(t, stubDir)
+	testutil.WriteStubScript(t, stubDir, "gh", fmt.Sprintf(`
+printf '%%s\n' "$*" >> %s
+printf '%%s\n' '[{"full_name":"acme/alpha","ssh_url":"git@github.com:acme/alpha.git","clone_url":"https://github.com/acme/alpha.git","private":false},{"full_name":"acme/bravo","ssh_url":"git@github.com:acme/bravo.git","clone_url":"https://github.com/acme/bravo.git","private":true}]'
+`, shellQuote(logPath)))
+
+	t.Setenv("GGG_TEST_IMPORT_SELECTION", "all")
+
+	out, err := runGGG(t, home, "import", "acme", "--http", "--group", "work")
+	if err != nil {
+		t.Fatalf("ggg import failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "Added 2 repositories.") {
+		t.Fatalf("unexpected import output:\n%s", out)
+	}
+
+	configData, err := os.ReadFile(testutil.ConfigPath(home))
+	if err != nil {
+		t.Fatalf("read config: %v", err)
+	}
+	configText := string(configData)
+	if !strings.Contains(configText, "https://github.com/acme/alpha.git") || !strings.Contains(configText, "https://github.com/acme/bravo.git") {
+		t.Fatalf("imported repos missing from config:\n%s", configText)
+	}
+	if strings.Count(configText, "group: work") != 2 {
+		t.Fatalf("imported group missing from config:\n%s", configText)
+	}
+
+	logData, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("read gh log: %v", err)
+	}
+	if !strings.Contains(string(logData), "/orgs/acme/repos") {
+		t.Fatalf("gh stub did not receive expected API call:\n%s", logData)
 	}
 }
 
@@ -172,6 +532,25 @@ func moduleRoot(t *testing.T) string {
 	}
 
 	return filepath.Dir(filepath.Dir(file))
+}
+
+func createRemoteRepo(t *testing.T, home string) (string, string) {
+	t.Helper()
+
+	seed := testutil.InitGitRepoInHome(t, home)
+	remote := testutil.CreateBareRemote(t, home, seed)
+	testutil.RunGit(t, seed, home, "remote", "add", "origin", remote)
+	testutil.RunGit(t, seed, home, "push", "-u", "origin", "main")
+	return seed, remote
+}
+
+func writeConfig(t *testing.T, home, content string) {
+	t.Helper()
+	testutil.WriteConfig(t, home, content)
+}
+
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'"'"'`) + "'"
 }
 
 type buildFailure struct {
