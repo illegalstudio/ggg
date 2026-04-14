@@ -121,9 +121,17 @@ Add a repository to the configuration.
 
 ```bash
 ggg add git@github.com:user/new-repo.git
+ggg add git@github.com:user/new-repo.git --clone
+ggg add git@github.com:user/new-repo.git --group work --path custom/path
 ```
 
-Appends the repo to `~/.config/ggg/repositories.yaml`. Fails if the URL is already configured. The repo is not cloned automatically — run `ggg clone` afterwards.
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--clone` | `-c` | Clone the repo immediately after adding. |
+| `--group` | `-g` | Assign the repo to a group. |
+| `--path` | `-p` | Custom clone path (relative to `base_dir`). |
+
+Appends the repo to `~/.config/ggg/repositories.yaml`. Fails if the URL is already configured.
 
 ---
 
@@ -202,6 +210,151 @@ If all repos are up to date, prints a success message.
 
 ---
 
+## `ggg open`
+
+Open a repository in an editor.
+
+```bash
+ggg open myrepo              # open in default editor ($EDITOR)
+ggg open myrepo code         # open in VS Code
+ggg open myrepo cursor       # open in Cursor
+```
+
+Uses `$EDITOR`, `$VISUAL`, or `vi` as fallback. Fails if the repo is not cloned.
+
+---
+
+## `ggg browse`
+
+Open a repository's remote URL in the browser.
+
+```bash
+ggg browse myrepo
+```
+
+Converts SSH URLs to HTTPS automatically. Opens the default browser on macOS, Linux, and Windows.
+
+---
+
+## `ggg import`
+
+Import repositories from GitHub via the `gh` CLI.
+
+```bash
+# Interactive: select account, then pick repos
+ggg import
+
+# Import from a specific org or user
+ggg import myorg
+
+# Use HTTPS URLs and assign to a group
+ggg import myorg --http --group work
+```
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--http` | | Use HTTPS URLs instead of SSH. |
+| `--group` | `-g` | Assign imported repos to a group. |
+
+Requires [`gh`](https://cli.github.com) to be installed. Presents an interactive multi-select to choose which repos to import. Already-configured repos are skipped.
+
+---
+
+## `ggg stash`
+
+Stash changes in dirty repositories.
+
+```bash
+# Stash all dirty repos (prompts for confirmation)
+ggg stash
+
+# Stash a specific repo
+ggg stash myrepo
+
+# Stash only repos in a group
+ggg stash --group work
+```
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--group` | `-g` | Stash only repos in this group. |
+
+Clean repos are skipped. Runs in parallel with a spinner.
+
+---
+
+## `ggg checkout`
+
+Checkout a branch in repositories that have it.
+
+```bash
+# Checkout in all repos (prompts for confirmation)
+ggg checkout main
+
+# Checkout in a specific repo
+ggg checkout develop myrepo
+
+# Checkout only in repos of a group
+ggg checkout main --group work
+```
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--group` | `-g` | Checkout only in repos in this group. |
+
+Repos that don't have the specified branch are skipped. Runs in parallel with a spinner.
+
+---
+
+## `ggg diff`
+
+Show a summary of changed files in dirty repositories.
+
+```bash
+# Show diff for all dirty repos (prompts for confirmation)
+ggg diff
+
+# Show diff for a specific repo
+ggg diff myrepo
+
+# Show diff only for repos in a group
+ggg diff --group work
+```
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--group` | `-g` | Show diff only for repos in this group. |
+
+Clean repos are skipped. Displays `git diff --stat` output for each dirty repo.
+
+---
+
+## `ggg config`
+
+Open the configuration file in your default editor.
+
+```bash
+ggg config
+```
+
+Uses `$EDITOR`, `$VISUAL`, or `vi` as fallback.
+
+---
+
+## `ggg shell-init`
+
+Print shell integration script for the `gcd` alias.
+
+```bash
+eval "$(ggg shell-init bash)"    # add to ~/.bashrc
+eval "$(ggg shell-init zsh)"     # add to ~/.zshrc
+ggg shell-init fish | source     # add to ~/.config/fish/config.fish
+```
+
+Generates a `gcd` function for quick directory navigation. See [Shell Integration](shell-integration.md) for details.
+
+---
+
 ## `ggg export`
 
 Export the configuration file to a given path.
@@ -239,3 +392,5 @@ Checks performed:
 | Blank groups | Detects repos with whitespace-only group names |
 
 If no issues are found, prints a success message.
+
+If conflicts are found (duplicate URLs or path conflicts), offers an interactive cleanup wizard that asks which entry to keep for each conflict and removes the duplicates from the config.
