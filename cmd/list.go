@@ -12,9 +12,10 @@ import (
 )
 
 var listCmd = &cobra.Command{
-	Use:     "list",
+	Use:     "list [filter]",
 	Short:   "List configured repositories and their status",
 	GroupID: GroupInfo,
+	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		showGroups, _ := cmd.Flags().GetBool("groups")
 		if showGroups {
@@ -29,8 +30,7 @@ var listCmd = &cobra.Command{
 			return nil
 		}
 
-		filter, _ := cmd.Flags().GetString("filter")
-		repos = filterByName(repos, filter)
+		repos = filterByName(repos, getFilter(cmd, args))
 
 		fmt.Println(ui.Title.Render("Repositories"))
 		fmt.Println()

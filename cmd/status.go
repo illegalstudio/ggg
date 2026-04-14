@@ -24,9 +24,10 @@ type repoStatus struct {
 }
 
 var statusCmd = &cobra.Command{
-	Use:     "status",
+	Use:     "status [filter]",
 	Short:   "Show status of all configured repositories",
 	GroupID: GroupInfo,
+	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, repos, err := loadRepos(cmd)
 		if err != nil {
@@ -36,8 +37,7 @@ var statusCmd = &cobra.Command{
 			return nil
 		}
 
-		filter, _ := cmd.Flags().GetString("filter")
-		repos = filterByName(repos, filter)
+		repos = filterByName(repos, getFilter(cmd, args))
 
 		statuses := make([]repoStatus, len(repos))
 		var wg sync.WaitGroup

@@ -21,9 +21,10 @@ type outdatedResult struct {
 }
 
 var outdatedCmd = &cobra.Command{
-	Use:     "outdated",
+	Use:     "outdated [filter]",
 	Short:   "Show repositories that are behind their remote",
 	GroupID: GroupInfo,
+	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, repos, err := loadRepos(cmd)
 		if err != nil {
@@ -33,8 +34,7 @@ var outdatedCmd = &cobra.Command{
 			return nil
 		}
 
-		filter, _ := cmd.Flags().GetString("filter")
-		repos = filterByName(repos, filter)
+		repos = filterByName(repos, getFilter(cmd, args))
 
 		results := make([]outdatedResult, len(repos))
 		var wg sync.WaitGroup

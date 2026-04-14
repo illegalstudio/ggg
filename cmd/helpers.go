@@ -55,6 +55,15 @@ func confirmAll(title, yesLabel string) (bool, error) {
 	return true, nil
 }
 
+// getFilter returns the filter string from --filter flag or the first positional argument.
+func getFilter(cmd *cobra.Command, args []string) string {
+	filter, _ := cmd.Flags().GetString("filter")
+	if filter == "" && len(args) > 0 {
+		filter = args[len(args)-1]
+	}
+	return filter
+}
+
 // filterByName filters repos by substring match on URL, path, or derived path.
 func filterByName(repos []config.Repo, filter string) []config.Repo {
 	if filter == "" {
