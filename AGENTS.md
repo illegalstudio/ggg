@@ -33,6 +33,7 @@ ui/              → Shared lipgloss styles for terminal output
 - **Parallelism**: I/O-heavy operations (clone, pull, fetch, status checks) run in parallel goroutines with `sync.WaitGroup`, wrapped in a `huh/spinner`
 - **Git calls**: Always use `--quiet` flag for git commands to suppress output; capture stdout only when parsing output (e.g., `git status --porcelain`)
 - **UI output**: Always use styles from `ui/styles.go` — never raw `fmt.Println` for user-facing messages
+- **Multi-repo confirmation**: Any command that performs a write/destructive action on multiple repos (clone, pull, push, stash, checkout, diff) **must** call `confirmAll()` when no specific `[name]` argument is provided. Read-only commands (list, status, outdated) are exempt.
 
 ## Testing
 

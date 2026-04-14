@@ -31,6 +31,14 @@ var pullCmd = &cobra.Command{
 				return err
 			}
 			repos = filtered
+		} else {
+			ok, err := confirmAll(fmt.Sprintf("Pull %d repositories?", len(repos)), "Yes, pull all")
+			if err != nil {
+				return err
+			}
+			if !ok {
+				return nil
+			}
 		}
 
 		type pullJob struct {
