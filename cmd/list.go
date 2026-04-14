@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"fmt"
+	"sort"
 
+	"go-git-get/config"
 	"go-git-get/repo"
 	"go-git-get/ui"
 
@@ -14,6 +16,11 @@ var listCmd = &cobra.Command{
 	Short:   "List configured repositories and their status",
 	GroupID: GroupInfo,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		showGroups, _ := cmd.Flags().GetBool("groups")
+		if showGroups {
+			return listGroups()
+		}
+
 		cfg, repos, err := loadRepos(cmd)
 		if err != nil {
 			return err
@@ -45,8 +52,42 @@ var listCmd = &cobra.Command{
 	},
 }
 
+func listGroups() error {
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+
+	groups := map[string]int{}
+	for _, r := range cfg.Repos {
+		if r.Group != "" {
+			groups[r.Group]++
+		}
+	}
+
+	if len(groups) == 0 {
+		fmt.Println(ui.Info.Render("No groups defined."))
+		return nil
+	}
+
+	names := make([]string, 0, len(groups))
+	for g := range groups {
+		names = append(names, g)
+	}
+	sort.Strings(names)
+
+	fmt.Println(ui.Title.Render("Groups"))
+	fmt.Println()
+	for _, g := range names {
+		fmt.Printf("  %s %s\n", ui.Repo.Render(g), ui.Muted.Render(fmt.Sprintf("(%d repos)", groups[g])))
+	}
+	fmt.Println()
+	return nil
+}
+
 func init() {
 	listCmd.Flags().StringP("group", "g", "", "List only repos in this group")
+	listCmd.Flags().Bool("groups", false, "Show available groups")
 	listCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
 	rootCmd.AddCommand(listCmd)
 }

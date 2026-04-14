@@ -19,11 +19,14 @@ List configured repositories and their clone status.
 ```bash
 ggg list
 ggg list --group work
+ggg list --groups
 ```
 
 | Flag | Short | Description |
 |------|-------|-------------|
 | `--group` | `-g` | List only repos in this group. |
+| `--groups` | | Show available groups with repo count. |
+| `--filter` | `-f` | Filter repos by name. |
 
 Output shows each repo with:
 - `✓` — cloned, with the full path

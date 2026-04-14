@@ -43,7 +43,7 @@
 
 - [x] Comando `ggg add <url> --clone` — aggiunge e clona in un colpo solo
 - [x] Comando `ggg add <url> --group <name>` — specificare gruppo e path da CLI
-- [ ] Comando `ggg list --groups` — mostra i gruppi disponibili
+- [x] Comando `ggg list --groups` — mostra i gruppi disponibili
 - [ ] Comando `ggg rename <old> <new>` — rinomina il path/alias di un repo
 - [x] Comando `ggg stash [name]` — esegue `git stash` su tutti i repo dirty
 - [ ] Comando `ggg branch [name]` — mostra o filtra i repo per branch corrente
