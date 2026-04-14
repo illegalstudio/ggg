@@ -210,6 +210,29 @@ If all repos are up to date, prints a success message.
 
 ---
 
+## `ggg push`
+
+Push commits to remote for repositories that are ahead.
+
+```bash
+# Push all repos with unpushed commits (prompts for confirmation)
+ggg push
+
+# Push a specific repo
+ggg push myrepo
+
+# Push only repos in a group
+ggg push --group work
+```
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--group` | `-g` | Push only repos in this group. |
+
+Only repos with commits ahead of their remote are pushed. Not-cloned repos and repos with no upstream are skipped. Pushes run **in parallel** with a spinner.
+
+---
+
 ## `ggg open`
 
 Open a repository in an editor.

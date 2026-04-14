@@ -162,6 +162,16 @@ func DiffSummary(repoPath string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
+// Push runs git push in the given repo directory.
+func Push(repoPath string) error {
+	cmd := exec.Command("git", "push", "--quiet")
+	cmd.Dir = repoPath
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("git push failed: %w", err)
+	}
+	return nil
+}
+
 // Clone clones a git repository to the given path (quiet mode, no stdout).
 func Clone(repoURL, destPath string) error {
 	if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
