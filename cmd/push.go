@@ -13,9 +13,10 @@ import (
 )
 
 var pushCmd = &cobra.Command{
-	Use:     "push [name]",
+	Use:     "push [filter]",
 	Short:   "Push commits to remote for repositories that are ahead",
 	GroupID: GroupRepo,
+	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, repos, err := loadRepos(cmd)
 		if err != nil {
@@ -25,13 +26,8 @@ var pushCmd = &cobra.Command{
 			return nil
 		}
 
-		if len(args) > 0 {
-			filtered, err := filterRepo(repos, args[0])
-			if err != nil {
-				return err
-			}
-			repos = filtered
-		}
+		filter := getFilter(cmd, args)
+		repos = filterByName(repos, filter)
 
 		type pushJob struct {
 			repo     config.Repo
@@ -69,7 +65,7 @@ var pushCmd = &cobra.Command{
 		}
 		fmt.Println()
 
-		if len(args) == 0 {
+		if filter == "" {
 			ok, err := confirmAll(fmt.Sprintf("Push %d repositories?", len(jobs)), "Yes, push all")
 			if err != nil {
 				return err
@@ -123,5 +119,6 @@ var pushCmd = &cobra.Command{
 
 func init() {
 	pushCmd.Flags().StringP("group", "g", "", "Push only repos in this group")
+	pushCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
 	rootCmd.AddCommand(pushCmd)
 }

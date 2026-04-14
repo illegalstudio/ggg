@@ -13,10 +13,10 @@ import (
 )
 
 var checkoutCmd = &cobra.Command{
-	Use:     "checkout <branch> [name]",
+	Use:     "checkout <branch> [filter]",
 	Short:   "Checkout a branch in repositories that have it",
 	GroupID: GroupRepo,
-	Args:  cobra.RangeArgs(1, 2),
+	Args:    cobra.RangeArgs(1, 2),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		branch := args[0]
 
@@ -28,13 +28,13 @@ var checkoutCmd = &cobra.Command{
 			return nil
 		}
 
-		if len(args) > 1 {
-			filtered, err := filterRepo(repos, args[1])
-			if err != nil {
-				return err
-			}
-			repos = filtered
-		} else {
+		filter, _ := cmd.Flags().GetString("filter")
+		if filter == "" && len(args) > 1 {
+			filter = args[1]
+		}
+		repos = filterByName(repos, filter)
+
+		if filter == "" {
 			ok, err := confirmAll(fmt.Sprintf("Checkout branch %q in all %d repositories?", branch, len(repos)), "Yes, checkout all")
 			if err != nil {
 				return err
@@ -113,5 +113,6 @@ var checkoutCmd = &cobra.Command{
 
 func init() {
 	checkoutCmd.Flags().StringP("group", "g", "", "Checkout only in repos in this group")
+	checkoutCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
 	rootCmd.AddCommand(checkoutCmd)
 }

@@ -15,9 +15,10 @@ import (
 )
 
 var cloneCmd = &cobra.Command{
-	Use:     "clone [name]",
-	Short:   "Clone repositories (all or a specific one)",
+	Use:     "clone [filter]",
+	Short:   "Clone repositories (all or filtered)",
 	GroupID: GroupRepo,
+	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, repos, err := loadRepos(cmd)
 		if err != nil {
@@ -27,13 +28,10 @@ var cloneCmd = &cobra.Command{
 			return nil
 		}
 
-		if len(args) > 0 {
-			filtered, err := filterRepo(repos, args[0])
-			if err != nil {
-				return err
-			}
-			repos = filtered
-		} else {
+		filter := getFilter(cmd, args)
+		repos = filterByName(repos, filter)
+
+		if filter == "" {
 			ok, err := confirmAll(fmt.Sprintf("Clone all %d repositories?", len(repos)), "Yes, clone all")
 			if err != nil {
 				return err
@@ -161,5 +159,6 @@ func filterRepo(repos []config.Repo, name string) ([]config.Repo, error) {
 
 func init() {
 	cloneCmd.Flags().StringP("group", "g", "", "Clone only repos in this group")
+	cloneCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
 	rootCmd.AddCommand(cloneCmd)
 }

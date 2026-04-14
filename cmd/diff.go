@@ -10,9 +10,10 @@ import (
 )
 
 var diffCmd = &cobra.Command{
-	Use:     "diff [name]",
+	Use:     "diff [filter]",
 	Short:   "Show a summary of changed files in dirty repositories",
 	GroupID: GroupRepo,
+	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, repos, err := loadRepos(cmd)
 		if err != nil {
@@ -22,13 +23,10 @@ var diffCmd = &cobra.Command{
 			return nil
 		}
 
-		if len(args) > 0 {
-			filtered, err := filterRepo(repos, args[0])
-			if err != nil {
-				return err
-			}
-			repos = filtered
-		} else {
+		filter := getFilter(cmd, args)
+		repos = filterByName(repos, filter)
+
+		if filter == "" {
 			ok, err := confirmAll(fmt.Sprintf("Show diff for all %d repositories?", len(repos)), "Yes, show all")
 			if err != nil {
 				return err
@@ -73,5 +71,6 @@ var diffCmd = &cobra.Command{
 
 func init() {
 	diffCmd.Flags().StringP("group", "g", "", "Show diff only for repos in this group")
+	diffCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
 	rootCmd.AddCommand(diffCmd)
 }

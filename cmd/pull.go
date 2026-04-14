@@ -13,9 +13,10 @@ import (
 )
 
 var pullCmd = &cobra.Command{
-	Use:     "pull [name]",
-	Short:   "Pull latest changes (all or a specific repo, only if clean)",
+	Use:     "pull [filter]",
+	Short:   "Pull latest changes (all or filtered repos, only if clean)",
 	GroupID: GroupRepo,
+	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, repos, err := loadRepos(cmd)
 		if err != nil {
@@ -25,13 +26,10 @@ var pullCmd = &cobra.Command{
 			return nil
 		}
 
-		if len(args) > 0 {
-			filtered, err := filterRepo(repos, args[0])
-			if err != nil {
-				return err
-			}
-			repos = filtered
-		} else {
+		filter := getFilter(cmd, args)
+		repos = filterByName(repos, filter)
+
+		if filter == "" {
 			ok, err := confirmAll(fmt.Sprintf("Pull %d repositories?", len(repos)), "Yes, pull all")
 			if err != nil {
 				return err
@@ -117,5 +115,6 @@ var pullCmd = &cobra.Command{
 
 func init() {
 	pullCmd.Flags().StringP("group", "g", "", "Pull only repos in this group")
+	pullCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
 	rootCmd.AddCommand(pullCmd)
 }

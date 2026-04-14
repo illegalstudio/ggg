@@ -13,9 +13,10 @@ import (
 )
 
 var stashCmd = &cobra.Command{
-	Use:     "stash [name]",
+	Use:     "stash [filter]",
 	Short:   "Stash changes in dirty repositories",
 	GroupID: GroupRepo,
+	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, repos, err := loadRepos(cmd)
 		if err != nil {
@@ -25,13 +26,10 @@ var stashCmd = &cobra.Command{
 			return nil
 		}
 
-		if len(args) > 0 {
-			filtered, err := filterRepo(repos, args[0])
-			if err != nil {
-				return err
-			}
-			repos = filtered
-		} else {
+		filter := getFilter(cmd, args)
+		repos = filterByName(repos, filter)
+
+		if filter == "" {
 			ok, err := confirmAll(fmt.Sprintf("Stash changes in all %d repositories?", len(repos)), "Yes, stash all")
 			if err != nil {
 				return err
@@ -111,5 +109,6 @@ var stashCmd = &cobra.Command{
 
 func init() {
 	stashCmd.Flags().StringP("group", "g", "", "Stash only repos in this group")
+	stashCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
 	rootCmd.AddCommand(stashCmd)
 }
