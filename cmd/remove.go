@@ -10,21 +10,35 @@ import (
 )
 
 var removeCmd = &cobra.Command{
-	Use:     "remove <name>",
+	Use:     "remove [name]",
 	Short:   "Remove a repository from the configuration",
 	GroupID: GroupConfig,
-	Args:    cobra.ExactArgs(1),
+	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		name := args[0]
-
 		cfg, err := config.LoadRaw()
 		if err != nil {
 			return err
 		}
+		if len(cfg.Repos) == 0 {
+			fmt.Println(ui.Info.Render("No repositories configured."))
+			return nil
+		}
 
-		idx, err := resolveOneRepoIndex(cfg.Repos, name)
-		if err != nil {
-			return err
+		var idx int
+		if len(args) == 0 {
+			indices := make([]int, len(cfg.Repos))
+			for i := range cfg.Repos {
+				indices[i] = i
+			}
+			idx, err = selectRepoIndex(cfg.Repos, indices, "Select a repository to remove")
+			if err != nil {
+				return err
+			}
+		} else {
+			idx, err = resolveOneRepoIndex(cfg.Repos, args[0])
+			if err != nil {
+				return err
+			}
 		}
 
 		removed := cfg.Repos[idx]

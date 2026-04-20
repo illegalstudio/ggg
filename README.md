@@ -47,7 +47,7 @@ ggg list
 | `ggg push [name]` | Push commits to remote for repos that are ahead |
 | `ggg status` | Show branch, dirty/clean, ahead/behind for all repos |
 | `ggg add <url>` | Add a repository to the configuration |
-| `ggg remove <name>` | Remove a repository from the configuration |
+| `ggg remove [name]` | Remove a repository from the configuration |
 | `ggg open <name>` | Open a repository in your editor |
 | `ggg browse <name>` | Open a repository's remote URL in the browser |
 | `ggg cd <name>` | Shell integration — `eval $(ggg cd <name>)` |
