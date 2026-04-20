@@ -143,21 +143,16 @@ var validateCmd = &cobra.Command{
 		for _, c := range conflicts {
 			options := make([]huh.Option[int], len(c.indices))
 			for i, idx := range c.indices {
-				r := cfg.Repos[idx]
-				label := r.URL
-				if r.Path != "" {
-					label += " (path: " + r.Path + ")"
-				}
-				if r.Group != "" {
-					label += " [" + r.Group + "]"
-				}
-				options[i] = huh.NewOption(label, idx)
+				options[i] = huh.NewOption(repoChoiceLabel(cfg.Repos[idx]), idx)
 			}
 
 			var keep int
 			err := huh.NewSelect[int]().
 				Title(fmt.Sprintf("%s: %s — which entry to keep?", c.kind, c.key)).
+				Description("Start typing to filter").
 				Options(options...).
+				Filtering(true).
+				Height(20).
 				Value(&keep).
 				Run()
 			if err != nil {

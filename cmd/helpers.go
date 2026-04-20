@@ -117,23 +117,7 @@ func resolveOneRepoIndex(repos []config.Repo, query string) (int, error) {
 	if len(matches) == 1 {
 		return matches[0], nil
 	}
-
-	options := make([]huh.Option[int], len(matches))
-	for i, idx := range matches {
-		options[i] = huh.NewOption(repos[idx].URL, idx)
-	}
-
-	var choice int
-	err := huh.NewSelect[int]().
-		Title(fmt.Sprintf("Multiple repositories match %q", query)).
-		Options(options...).
-		Value(&choice).
-		Run()
-	if err != nil {
-		return -1, err
-	}
-
-	return choice, nil
+	return selectRepoIndex(repos, matches, fmt.Sprintf("Multiple repositories match %q", query))
 }
 
 func matchRepoIndices(repos []config.Repo, query string) []int {
@@ -158,6 +142,39 @@ func matchRepoIndices(repos []config.Repo, query string) []int {
 	}
 
 	return matches
+}
+
+func selectRepoIndex(repos []config.Repo, indices []int, title string) (int, error) {
+	options := make([]huh.Option[int], len(indices))
+	for i, idx := range indices {
+		options[i] = huh.NewOption(repoChoiceLabel(repos[idx]), idx)
+	}
+
+	var choice int
+	err := huh.NewSelect[int]().
+		Title(title).
+		Description("Start typing to filter").
+		Options(options...).
+		Filtering(true).
+		Height(20).
+		Value(&choice).
+		Run()
+	if err != nil {
+		return -1, err
+	}
+
+	return choice, nil
+}
+
+func repoChoiceLabel(r config.Repo) string {
+	label := r.URL
+	if r.Path != "" {
+		label += " (path: " + r.Path + ")"
+	}
+	if r.Group != "" {
+		label += " [" + r.Group + "]"
+	}
+	return label
 }
 
 func confirmBulkAction(filter string, count int, title, yesLabel string) (bool, error) {
