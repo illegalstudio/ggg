@@ -1,6 +1,7 @@
 package tests
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -477,6 +478,108 @@ printf '%%s\n' '[{"full_name":"acme/alpha","ssh_url":"git@github.com:acme/alpha.
 	}
 	if !strings.Contains(string(logData), "/orgs/acme/repos") {
 		t.Fatalf("gh stub did not receive expected API call:\n%s", logData)
+	}
+}
+
+func TestCLIJSONStatusWithNoReposEmitsValidJSON(t *testing.T) {
+	home := testutil.SetupHome(t)
+	writeConfig(t, home, `
+base_dir: ~/Developer
+repos: []
+`)
+
+	out, err := runGGG(t, home, "--json", "status")
+	if err != nil {
+		t.Fatalf("ggg --json status failed: %v\n%s", err, out)
+	}
+
+	var payload struct {
+		Repos []any `json:"repos"`
+	}
+	if err := json.Unmarshal([]byte(out), &payload); err != nil {
+		t.Fatalf("status did not emit valid JSON: %v\n%s", err, out)
+	}
+	if len(payload.Repos) != 0 {
+		t.Fatalf("repos length = %d, want 0\n%s", len(payload.Repos), out)
+	}
+}
+
+func TestCLIJSONUnsupportedCommandEmitsStructuredError(t *testing.T) {
+	home := testutil.SetupHome(t)
+
+	out, err := runGGG(t, home, "--json", "browse", "anything")
+	if err == nil {
+		t.Fatalf("ggg --json browse succeeded unexpectedly:\n%s", out)
+	}
+
+	var payload struct {
+		Supported bool   `json:"supported"`
+		Command   string `json:"command"`
+		Error     string `json:"error"`
+	}
+	if err := json.Unmarshal([]byte(out), &payload); err != nil {
+		t.Fatalf("browse did not emit valid JSON error: %v\n%s", err, out)
+	}
+	if payload.Supported || payload.Command != "browse" || !strings.Contains(payload.Error, "--json is not supported") {
+		t.Fatalf("unexpected JSON error payload: %+v\n%s", payload, out)
+	}
+}
+
+func TestCLIJSONImportRequiresAndImportsSingleRepo(t *testing.T) {
+	home := testutil.SetupHome(t)
+	writeConfig(t, home, `
+base_dir: ~/Developer
+repos: []
+`)
+
+	stubDir := t.TempDir()
+	logPath := filepath.Join(stubDir, "gh.log")
+	testutil.PrependPath(t, stubDir)
+	testutil.WriteStubScript(t, stubDir, "gh", fmt.Sprintf(`
+printf '%%s\n' "$*" >> %s
+printf '%%s\n' '[{"full_name":"acme/alpha","ssh_url":"git@github.com:acme/alpha.git","clone_url":"https://github.com/acme/alpha.git","private":false},{"full_name":"acme/bravo","ssh_url":"git@github.com:acme/bravo.git","clone_url":"https://github.com/acme/bravo.git","private":true}]'
+`, shellQuote(logPath)))
+
+	out, err := runGGG(t, home, "--json", "import", "acme")
+	if err == nil {
+		t.Fatalf("ggg --json import without repo succeeded unexpectedly:\n%s", out)
+	}
+	var errorPayload struct {
+		Error string `json:"error"`
+	}
+	if err := json.Unmarshal([]byte(out), &errorPayload); err != nil {
+		t.Fatalf("import error was not valid JSON: %v\n%s", err, out)
+	}
+	if !strings.Contains(errorPayload.Error, "repository argument") {
+		t.Fatalf("unexpected import error payload: %+v\n%s", errorPayload, out)
+	}
+
+	out, err = runGGG(t, home, "--json", "import", "acme", "alpha", "--http", "--group", "work")
+	if err != nil {
+		t.Fatalf("ggg --json import single repo failed: %v\n%s", err, out)
+	}
+
+	var payload struct {
+		Added   []string `json:"added"`
+		Skipped []string `json:"skipped"`
+	}
+	if err := json.Unmarshal([]byte(out), &payload); err != nil {
+		t.Fatalf("import did not emit valid JSON: %v\n%s", err, out)
+	}
+	if len(payload.Added) != 1 || payload.Added[0] != "https://github.com/acme/alpha.git" || len(payload.Skipped) != 0 {
+		t.Fatalf("unexpected import JSON payload: %+v\n%s", payload, out)
+	}
+
+	configData, err := os.ReadFile(testutil.ConfigPath(home))
+	if err != nil {
+		t.Fatalf("read config: %v", err)
+	}
+	configText := string(configData)
+	if !strings.Contains(configText, "https://github.com/acme/alpha.git") {
+		t.Fatalf("alpha missing from config:\n%s", configText)
+	}
+	if strings.Contains(configText, "https://github.com/acme/bravo.git") {
+		t.Fatalf("json import imported more than the requested repo:\n%s", configText)
 	}
 }
 

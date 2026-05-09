@@ -47,6 +47,13 @@ ui/              → Shared lipgloss styles for terminal output
 - **UI output**: Normal command output is usually `fmt.Print*` combined with styles from `ui/styles.go`; fatal errors are generally returned to Cobra rather than printed inline
 - **Interactive flows**: `huh` is used not only for confirmation prompts, but also for repo disambiguation, import multi-select, export path input, and validate cleanup
 - **Multi-repo confirmation**: Bulk repo operations that affect multiple repositories or emit repo-by-repo action output should call `confirmAll()` when no explicit filter/name is provided. Current commands following this rule are `clone`, `pull`, `push`, `stash`, `checkout`, and `diff`.
+- **JSON output (`--json`)**: A global persistent flag, declared in `cmd/root.go`, toggles JSON output for supported commands. Helpers live in `cmd/json.go`:
+  - `jsonOutput` (package var) — set by the root flag binding
+  - `emitJSON(v)` / `maybeJSON(v)` — pattern is `if done, err := maybeJSON(data); done { return err }` placed right before the human-formatted rendering
+  - `errString(err)` — turns an `error` into a JSON-friendly string (empty when nil)
+  - `unsupportedJSON(command)` — returns a structured JSON error for commands where JSON would change the command contract; current unsupported commands are `config`, `open`, and `browse`
+  - In JSON mode, Cobra errors are emitted as `{"error": "..."}`, `runParallelWithSpinner` runs synchronously without a spinner, `confirmAll`/`confirmBulkAction` auto-confirm, and `selectRepoIndex` returns an error instead of prompting (be more specific). Each command builds its result data once, then chooses between JSON and styled text via `maybeJSON`.
+  - `import --json` requires explicit account and repository arguments and imports only that one repository; it must never treat JSON mode as "select all".
 
 ## Testing
 

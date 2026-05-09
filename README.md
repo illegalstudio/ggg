@@ -51,7 +51,7 @@ ggg list
 | `ggg open <name>` | Open a repository in your editor |
 | `ggg browse <name>` | Open a repository's remote URL in the browser |
 | `ggg cd <name>` | Shell integration — `eval $(ggg cd <name>)` |
-| `ggg import [org]` | Import repositories from GitHub via `gh` CLI |
+| `ggg import [org] [repo]` | Import repositories from GitHub via `gh` CLI |
 | `ggg export [path]` | Export the configuration file to a given path |
 | `ggg stash [name]` | Stash changes in dirty repositories |
 | `ggg checkout <branch>` | Checkout a branch across repositories |
@@ -61,7 +61,7 @@ ggg list
 | `ggg validate` | Validate config for duplicates and conflicts |
 | `ggg shell-init` | Print shell integration script (`gcd` alias) |
 
-Most commands support `--group/-g` to filter by group.
+Most commands support `--group/-g` to filter by group. Data-producing commands support `--json` for machine-readable output; commands that launch an editor or browser report that JSON is unsupported.
 
 ## Documentation
 
