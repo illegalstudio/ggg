@@ -16,11 +16,19 @@ var stashCmd = &cobra.Command{
 	GroupID: GroupRepo,
 	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		type result struct {
+			URL   string `json:"url"`
+			Error string `json:"error,omitempty"`
+		}
+
 		cfg, repos, filter, err := resolveBulkRepos(cmd, args)
 		if err != nil {
 			return err
 		}
 		if len(repos) == 0 {
+			if done, err := maybeJSON(map[string]any{"results": []result{}}); done {
+				return err
+			}
 			return nil
 		}
 
@@ -28,6 +36,7 @@ var stashCmd = &cobra.Command{
 			repo     config.Repo
 			fullPath string
 		}
+
 		var jobs []stashJob
 
 		for _, r := range repos {
@@ -46,6 +55,9 @@ var stashCmd = &cobra.Command{
 		}
 
 		if len(jobs) == 0 {
+			if done, err := maybeJSON(map[string]any{"results": []result{}}); done {
+				return err
+			}
 			fmt.Println(ui.Info.Render("No dirty repositories to stash."))
 			return nil
 		}
@@ -58,11 +70,6 @@ var stashCmd = &cobra.Command{
 			return nil
 		}
 
-		type result struct {
-			url string
-			err error
-		}
-
 		title := fmt.Sprintf("Stashing %d repositories...", len(jobs))
 		if len(jobs) == 1 {
 			title = fmt.Sprintf("Stashing %s...", jobs[0].repo.URL)
@@ -70,20 +77,24 @@ var stashCmd = &cobra.Command{
 
 		results, err := runParallelWithSpinner(jobs, title, func(job stashJob) result {
 			return result{
-				url: job.repo.URL,
-				err: repo.Stash(job.fullPath),
+				URL:   job.repo.URL,
+				Error: errString(repo.Stash(job.fullPath)),
 			}
 		})
 		if err != nil {
 			return err
 		}
 
+		if done, err := maybeJSON(map[string]any{"results": results}); done {
+			return err
+		}
+
 		fmt.Println()
 		for _, r := range results {
-			if r.err != nil {
-				fmt.Printf("  %s %s %s\n", ui.Error.Render("✗"), ui.Repo.Render(r.url), ui.Error.Render(r.err.Error()))
+			if r.Error != "" {
+				fmt.Printf("  %s %s %s\n", ui.Error.Render("✗"), ui.Repo.Render(r.URL), ui.Error.Render(r.Error))
 			} else {
-				fmt.Printf("  %s %s\n", ui.Success.Render("✓"), ui.Repo.Render(r.url))
+				fmt.Printf("  %s %s\n", ui.Success.Render("✓"), ui.Repo.Render(r.URL))
 			}
 		}
 		return nil

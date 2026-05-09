@@ -20,6 +20,9 @@ var removeCmd = &cobra.Command{
 			return err
 		}
 		if len(cfg.Repos) == 0 {
+			if done, err := maybeJSON(map[string]any{"removed": false, "reason": "no repositories configured"}); done {
+				return err
+			}
 			fmt.Println(ui.Info.Render("No repositories configured."))
 			return nil
 		}
@@ -45,6 +48,10 @@ var removeCmd = &cobra.Command{
 		cfg.Repos = append(cfg.Repos[:idx], cfg.Repos[idx+1:]...)
 
 		if err := config.Save(cfg); err != nil {
+			return err
+		}
+
+		if done, err := maybeJSON(map[string]any{"removed": true, "url": removed.URL}); done {
 			return err
 		}
 

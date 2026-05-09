@@ -27,24 +27,52 @@ var listCmd = &cobra.Command{
 			return err
 		}
 		if len(repos) == 0 {
+			if done, err := maybeJSON(map[string]any{"repos": []any{}}); done {
+				return err
+			}
 			return nil
 		}
 
 		repos = filterByName(repos, getFilter(cmd, args))
 
-		fmt.Println(ui.Title.Render("Repositories"))
-		fmt.Println()
+		type listEntry struct {
+			URL    string `json:"url"`
+			Path   string `json:"path"`
+			Group  string `json:"group,omitempty"`
+			Cloned bool   `json:"cloned"`
+			Error  string `json:"error,omitempty"`
+		}
+
+		entries := make([]listEntry, 0, len(repos))
 		for _, r := range repos {
 			fullPath, err := repo.FullPath(cfg.BaseDir, r)
 			if err != nil {
-				fmt.Printf("  %s %s\n", ui.Error.Render("✗"), ui.Error.Render(r.URL+" (invalid URL)"))
+				entries = append(entries, listEntry{URL: r.URL, Group: r.Group, Error: err.Error()})
 				continue
 			}
+			entries = append(entries, listEntry{
+				URL:    r.URL,
+				Path:   fullPath,
+				Group:  r.Group,
+				Cloned: repo.IsCloned(fullPath),
+			})
+		}
 
-			if repo.IsCloned(fullPath) {
-				fmt.Printf("  %s %s → %s\n", ui.Success.Render("✓"), ui.Repo.Render(r.URL), ui.Path.Render(fullPath))
+		if done, err := maybeJSON(map[string]any{"repos": entries}); done {
+			return err
+		}
+
+		fmt.Println(ui.Title.Render("Repositories"))
+		fmt.Println()
+		for _, e := range entries {
+			if e.Error != "" {
+				fmt.Printf("  %s %s\n", ui.Error.Render("✗"), ui.Error.Render(e.URL+" (invalid URL)"))
+				continue
+			}
+			if e.Cloned {
+				fmt.Printf("  %s %s → %s\n", ui.Success.Render("✓"), ui.Repo.Render(e.URL), ui.Path.Render(e.Path))
 			} else {
-				fmt.Printf("  %s %s → %s\n", ui.Muted.Render("○"), ui.Repo.Render(r.URL), ui.Path.Render(fullPath))
+				fmt.Printf("  %s %s → %s\n", ui.Muted.Render("○"), ui.Repo.Render(e.URL), ui.Path.Render(e.Path))
 			}
 		}
 		fmt.Println()
@@ -65,16 +93,29 @@ func listGroups() error {
 		}
 	}
 
-	if len(groups) == 0 {
-		fmt.Println(ui.Info.Render("No groups defined."))
-		return nil
-	}
-
 	names := make([]string, 0, len(groups))
 	for g := range groups {
 		names = append(names, g)
 	}
 	sort.Strings(names)
+
+	type groupEntry struct {
+		Name  string `json:"name"`
+		Count int    `json:"count"`
+	}
+	entries := make([]groupEntry, 0, len(names))
+	for _, g := range names {
+		entries = append(entries, groupEntry{Name: g, Count: groups[g]})
+	}
+
+	if done, err := maybeJSON(map[string]any{"groups": entries}); done {
+		return err
+	}
+
+	if len(groups) == 0 {
+		fmt.Println(ui.Info.Render("No groups defined."))
+		return nil
+	}
 
 	fmt.Println(ui.Title.Render("Groups"))
 	fmt.Println()

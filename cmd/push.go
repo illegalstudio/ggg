@@ -16,11 +16,20 @@ var pushCmd = &cobra.Command{
 	GroupID: GroupRepo,
 	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		type result struct {
+			URL   string `json:"url"`
+			Ahead int    `json:"ahead"`
+			Error string `json:"error,omitempty"`
+		}
+
 		cfg, repos, filter, err := resolveBulkRepos(cmd, args)
 		if err != nil {
 			return err
 		}
 		if len(repos) == 0 {
+			if done, err := maybeJSON(map[string]any{"results": []result{}}); done {
+				return err
+			}
 			return nil
 		}
 
@@ -29,6 +38,7 @@ var pushCmd = &cobra.Command{
 			fullPath string
 			ahead    int
 		}
+
 		var jobs []pushJob
 
 		for _, r := range repos {
@@ -50,15 +60,20 @@ var pushCmd = &cobra.Command{
 		}
 
 		if len(jobs) == 0 {
+			if done, err := maybeJSON(map[string]any{"results": []result{}}); done {
+				return err
+			}
 			fmt.Println(ui.Info.Render("All repositories are up to date — nothing to push."))
 			return nil
 		}
 
-		// Show what will be pushed
-		for _, j := range jobs {
-			fmt.Printf("  %s %s %s\n", ui.Info.Render("↑"), ui.Repo.Render(j.repo.URL), ui.Muted.Render(fmt.Sprintf("(%d commits ahead)", j.ahead)))
+		// Show what will be pushed (skipped in JSON mode)
+		if !jsonOutput {
+			for _, j := range jobs {
+				fmt.Printf("  %s %s %s\n", ui.Info.Render("↑"), ui.Repo.Render(j.repo.URL), ui.Muted.Render(fmt.Sprintf("(%d commits ahead)", j.ahead)))
+			}
+			fmt.Println()
 		}
-		fmt.Println()
 
 		ok, err := confirmBulkAction(filter, len(jobs), "Push %d repositories?", "Yes, push all")
 		if err != nil {
@@ -68,11 +83,6 @@ var pushCmd = &cobra.Command{
 			return nil
 		}
 
-		type result struct {
-			url string
-			err error
-		}
-
 		title := fmt.Sprintf("Pushing %d repositories...", len(jobs))
 		if len(jobs) == 1 {
 			title = fmt.Sprintf("Pushing %s...", jobs[0].repo.URL)
@@ -80,20 +90,25 @@ var pushCmd = &cobra.Command{
 
 		results, err := runParallelWithSpinner(jobs, title, func(job pushJob) result {
 			return result{
-				url: job.repo.URL,
-				err: repo.Push(job.fullPath),
+				URL:   job.repo.URL,
+				Ahead: job.ahead,
+				Error: errString(repo.Push(job.fullPath)),
 			}
 		})
 		if err != nil {
 			return err
 		}
 
+		if done, err := maybeJSON(map[string]any{"results": results}); done {
+			return err
+		}
+
 		fmt.Println()
 		for _, r := range results {
-			if r.err != nil {
-				fmt.Printf("  %s %s %s\n", ui.Error.Render("✗"), ui.Repo.Render(r.url), ui.Error.Render(r.err.Error()))
+			if r.Error != "" {
+				fmt.Printf("  %s %s %s\n", ui.Error.Render("✗"), ui.Repo.Render(r.URL), ui.Error.Render(r.Error))
 			} else {
-				fmt.Printf("  %s %s\n", ui.Success.Render("✓"), ui.Repo.Render(r.url))
+				fmt.Printf("  %s %s\n", ui.Success.Render("✓"), ui.Repo.Render(r.URL))
 			}
 		}
 		return nil

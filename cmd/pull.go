@@ -16,11 +16,19 @@ var pullCmd = &cobra.Command{
 	GroupID: GroupRepo,
 	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		type result struct {
+			URL   string `json:"url"`
+			Error string `json:"error,omitempty"`
+		}
+
 		cfg, repos, filter, err := resolveBulkRepos(cmd, args)
 		if err != nil {
 			return err
 		}
 		if len(repos) == 0 {
+			if done, err := maybeJSON(map[string]any{"results": []result{}}); done {
+				return err
+			}
 			return nil
 		}
 
@@ -28,10 +36,6 @@ var pullCmd = &cobra.Command{
 			repo     config.Repo
 			fullPath string
 			strategy string
-		}
-		type result struct {
-			url string
-			err error
 		}
 
 		var jobs []pullJob
@@ -56,6 +60,9 @@ var pullCmd = &cobra.Command{
 		}
 
 		if len(jobs) == 0 {
+			if done, err := maybeJSON(map[string]any{"results": []result{}}); done {
+				return err
+			}
 			fmt.Println(ui.Info.Render("No repositories to pull (all clean, dirty, or not cloned)."))
 			return nil
 		}
@@ -74,19 +81,23 @@ var pullCmd = &cobra.Command{
 		}
 
 		results, err := runParallelWithSpinner(jobs, title, func(job pullJob) result {
-			return result{url: job.repo.URL, err: repo.Pull(job.fullPath, job.strategy)}
+			return result{URL: job.repo.URL, Error: errString(repo.Pull(job.fullPath, job.strategy))}
 		})
 		if err != nil {
+			return err
+		}
+
+		if done, err := maybeJSON(map[string]any{"results": results}); done {
 			return err
 		}
 
 		// Print results
 		fmt.Println()
 		for _, r := range results {
-			if r.err != nil {
-				fmt.Printf("  %s %s %s\n", ui.Error.Render("✗"), ui.Repo.Render(r.url), ui.Error.Render(r.err.Error()))
+			if r.Error != "" {
+				fmt.Printf("  %s %s %s\n", ui.Error.Render("✗"), ui.Repo.Render(r.URL), ui.Error.Render(r.Error))
 			} else {
-				fmt.Printf("  %s %s\n", ui.Success.Render("✓"), ui.Repo.Render(r.url))
+				fmt.Printf("  %s %s\n", ui.Success.Render("✓"), ui.Repo.Render(r.URL))
 			}
 		}
 		return nil

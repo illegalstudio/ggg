@@ -26,7 +26,7 @@ var exportCmd = &cobra.Command{
 		var dest string
 		if len(args) == 1 {
 			dest = args[0]
-		} else {
+		} else if !jsonOutput {
 			err := huh.NewInput().
 				Title("Export path").
 				Placeholder("./repositories.yaml").
@@ -69,6 +69,9 @@ var exportCmd = &cobra.Command{
 		}
 
 		abs, _ := filepath.Abs(dest)
+		if done, err := maybeJSON(map[string]any{"exported": true, "path": abs}); done {
+			return err
+		}
 		fmt.Println(ui.Success.Render("✓") + " Config exported to " + ui.Path.Render(abs))
 		return nil
 	},

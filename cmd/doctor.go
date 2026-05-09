@@ -14,9 +14,9 @@ import (
 )
 
 type checkResult struct {
-	label   string
-	ok      bool
-	message string
+	Label   string `json:"label"`
+	OK      bool   `json:"ok"`
+	Message string `json:"message"`
 }
 
 var doctorCmd = &cobra.Command{
@@ -26,12 +26,40 @@ var doctorCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		var results []checkResult
 
+		type remoteCheck struct {
+			URL       string `json:"url"`
+			Reachable bool   `json:"reachable"`
+		}
+
+		emit := func(checks []checkResult, remotes []remoteCheck) error {
+			if done, err := maybeJSON(map[string]any{"checks": checks, "remotes": remotes}); done {
+				return err
+			}
+			printResults(checks)
+			unreachable := 0
+			for _, rc := range remotes {
+				if !rc.Reachable {
+					unreachable++
+				}
+			}
+			if unreachable > 0 {
+				fmt.Println()
+				fmt.Println(ui.Muted.Render("  Unreachable remotes:"))
+				for _, rc := range remotes {
+					if !rc.Reachable {
+						fmt.Printf("    %s %s\n", ui.Error.Render("✗"), ui.Repo.Render(rc.URL))
+					}
+				}
+			}
+			fmt.Println()
+			return nil
+		}
+
 		// Check 1: config file exists
 		configPath := config.ConfigPath()
 		if _, err := os.Stat(configPath); os.IsNotExist(err) {
 			results = append(results, checkResult{"Config file", false, "not found at " + configPath})
-			printResults(results)
-			return nil
+			return emit(results, nil)
 		}
 		results = append(results, checkResult{"Config file", true, configPath})
 
@@ -39,8 +67,7 @@ var doctorCmd = &cobra.Command{
 		cfg, err := config.Load()
 		if err != nil {
 			results = append(results, checkResult{"Config syntax", false, err.Error()})
-			printResults(results)
-			return nil
+			return emit(results, nil)
 		}
 		results = append(results, checkResult{"Config syntax", true, "valid"})
 
@@ -85,10 +112,6 @@ var doctorCmd = &cobra.Command{
 		results = append(results, checkResult{"Cloned", true, fmt.Sprintf("%d cloned, %d missing", cloned, notCloned)})
 
 		// Check 7: remote reachability (parallel)
-		type remoteCheck struct {
-			url       string
-			reachable bool
-		}
 		remoteResults := make([]remoteCheck, len(cfg.Repos))
 		var wg sync.WaitGroup
 
@@ -97,19 +120,23 @@ var doctorCmd = &cobra.Command{
 				wg.Add(1)
 				go func(idx int, url string) {
 					defer wg.Done()
-					remoteResults[idx] = remoteCheck{url: url, reachable: repo.RemoteReachable(url)}
+					remoteResults[idx] = remoteCheck{URL: url, Reachable: repo.RemoteReachable(url)}
 				}(i, r.URL)
 			}
 			wg.Wait()
 		}
 
-		if err := spinner.New().Title("Checking remotes...").Action(action).Run(); err != nil {
-			return err
+		if jsonOutput {
+			action()
+		} else {
+			if err := spinner.New().Title("Checking remotes...").Action(action).Run(); err != nil {
+				return err
+			}
 		}
 
 		unreachable := 0
 		for _, rc := range remoteResults {
-			if !rc.reachable {
+			if !rc.Reachable {
 				unreachable++
 			}
 		}
@@ -119,22 +146,7 @@ var doctorCmd = &cobra.Command{
 			results = append(results, checkResult{"Remotes", true, "all reachable"})
 		}
 
-		// Print all results
-		printResults(results)
-
-		// Print unreachable details
-		if unreachable > 0 {
-			fmt.Println()
-			fmt.Println(ui.Muted.Render("  Unreachable remotes:"))
-			for _, rc := range remoteResults {
-				if !rc.reachable {
-					fmt.Printf("    %s %s\n", ui.Error.Render("✗"), ui.Repo.Render(rc.url))
-				}
-			}
-		}
-
-		fmt.Println()
-		return nil
+		return emit(results, remoteResults)
 	},
 }
 
@@ -143,10 +155,10 @@ func printResults(results []checkResult) {
 	fmt.Println()
 	for _, r := range results {
 		icon := ui.Success.Render("✓")
-		if !r.ok {
+		if !r.OK {
 			icon = ui.Error.Render("✗")
 		}
-		fmt.Printf("  %s %s %s\n", icon, ui.Repo.Render(r.label+":"), ui.Muted.Render(r.message))
+		fmt.Printf("  %s %s %s\n", icon, ui.Repo.Render(r.Label+":"), ui.Muted.Render(r.Message))
 	}
 }
 

@@ -34,6 +34,10 @@ var cdCmd = &cobra.Command{
 			return fmt.Errorf("repository is not cloned: %s", fullPath)
 		}
 
+		if done, err := maybeJSON(map[string]any{"path": fullPath, "url": r.URL}); done {
+			return err
+		}
+
 		fmt.Print(fullPath)
 		return nil
 	},
