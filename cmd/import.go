@@ -25,19 +25,30 @@ type ghRepo struct {
 }
 
 var importCmd = &cobra.Command{
-	Use:     "import [org]",
+	Use:     "import [org] [repo]",
 	Short:   "Import repositories from GitHub via gh CLI",
 	GroupID: GroupConfig,
-	Args:    cobra.MaximumNArgs(1),
+	Args:    cobra.MaximumNArgs(2),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		org := ""
+		repoQuery := ""
+		if len(args) > 0 {
+			org = args[0]
+			if len(args) > 1 {
+				repoQuery = args[1]
+			}
+		} else if jsonOutput {
+			return fmt.Errorf("--json mode requires explicit org/user and repository arguments")
+		}
+		if jsonOutput && repoQuery == "" {
+			return fmt.Errorf("--json mode requires a repository argument")
+		}
+
 		if err := requireBinary("gh"); err != nil {
 			return err
 		}
 
-		org := ""
-		if len(args) > 0 {
-			org = args[0]
-		} else {
+		if len(args) == 0 {
 			selected, err := selectOrg()
 			if err != nil {
 				return err
@@ -54,14 +65,21 @@ var importCmd = &cobra.Command{
 			repos, fetchErr = fetchRepos(org)
 		}
 
-		if err := spinner.New().Title(fmt.Sprintf("Fetching repositories from %s...", org)).Action(action).Run(); err != nil {
-			return err
+		if jsonOutput {
+			action()
+		} else {
+			if err := spinner.New().Title(fmt.Sprintf("Fetching repositories from %s...", org)).Action(action).Run(); err != nil {
+				return err
+			}
 		}
 		if fetchErr != nil {
 			return fetchErr
 		}
 
 		if len(repos) == 0 {
+			if done, err := maybeJSON(map[string]any{"added": []string{}, "skipped": []string{}}); done {
+				return err
+			}
 			fmt.Println(ui.Info.Render("No repositories found."))
 			return nil
 		}
@@ -70,12 +88,25 @@ var importCmd = &cobra.Command{
 			return repos[i].FullName < repos[j].FullName
 		})
 
-		selected, err := selectRepos(repos)
-		if err != nil {
-			return err
+		var selected []ghRepo
+		if repoQuery != "" {
+			selectedRepo, err := resolveImportedRepo(repos, repoQuery)
+			if err != nil {
+				return err
+			}
+			selected = []ghRepo{selectedRepo}
+		} else {
+			var err error
+			selected, err = selectRepos(repos)
+			if err != nil {
+				return err
+			}
 		}
 
 		if len(selected) == 0 {
+			if done, err := maybeJSON(map[string]any{"added": []string{}, "skipped": []string{}}); done {
+				return err
+			}
 			fmt.Println(ui.Muted.Render("No repositories selected."))
 			return nil
 		}
@@ -90,7 +121,7 @@ var importCmd = &cobra.Command{
 			existing[r.URL] = true
 		}
 
-		added := 0
+		var addedURLs, skippedURLs []string
 		for _, r := range selected {
 			url := r.SSHURL
 			if useHTTP {
@@ -98,16 +129,24 @@ var importCmd = &cobra.Command{
 			}
 
 			if existing[url] {
-				fmt.Printf("  %s %s %s\n", ui.Muted.Render("●"), ui.Muted.Render(r.FullName), ui.Muted.Render("(already configured)"))
+				skippedURLs = append(skippedURLs, url)
+				if !jsonOutput {
+					fmt.Printf("  %s %s %s\n", ui.Muted.Render("●"), ui.Muted.Render(r.FullName), ui.Muted.Render("(already configured)"))
+				}
 				continue
 			}
 
 			cfg.Repos = append(cfg.Repos, config.Repo{URL: url, Group: group})
-			added++
-			fmt.Printf("  %s %s\n", ui.Success.Render("✓"), ui.Repo.Render(r.FullName))
+			addedURLs = append(addedURLs, url)
+			if !jsonOutput {
+				fmt.Printf("  %s %s\n", ui.Success.Render("✓"), ui.Repo.Render(r.FullName))
+			}
 		}
 
-		if added == 0 {
+		if len(addedURLs) == 0 {
+			if done, err := maybeJSON(map[string]any{"added": addedURLs, "skipped": skippedURLs}); done {
+				return err
+			}
 			fmt.Println(ui.Info.Render("All selected repositories are already configured."))
 			return nil
 		}
@@ -116,7 +155,11 @@ var importCmd = &cobra.Command{
 			return err
 		}
 
-		fmt.Printf("\n  %s\n", ui.Success.Render(fmt.Sprintf("Added %d repositories.", added)))
+		if done, err := maybeJSON(map[string]any{"added": addedURLs, "skipped": skippedURLs}); done {
+			return err
+		}
+
+		fmt.Printf("\n  %s\n", ui.Success.Render(fmt.Sprintf("Added %d repositories.", len(addedURLs))))
 		return nil
 	},
 }
@@ -200,6 +243,10 @@ func selectRepos(repos []ghRepo) ([]ghRepo, error) {
 		return selected, err
 	}
 
+	if jsonOutput {
+		return nil, fmt.Errorf("--json mode requires a repository argument")
+	}
+
 	options := make([]huh.Option[int], len(repos))
 	for i, r := range repos {
 		label := r.FullName
@@ -227,6 +274,38 @@ func selectRepos(repos []ghRepo) ([]ghRepo, error) {
 		result[i] = repos[idx]
 	}
 	return result, nil
+}
+
+func resolveImportedRepo(repos []ghRepo, query string) (ghRepo, error) {
+	query = strings.TrimSpace(query)
+	queryLower := strings.ToLower(query)
+	matches := make([]ghRepo, 0, 1)
+	seen := map[string]bool{}
+
+	for _, r := range repos {
+		name := r.FullName
+		if slash := strings.LastIndex(name, "/"); slash >= 0 {
+			name = name[slash+1:]
+		}
+
+		if strings.EqualFold(r.FullName, query) ||
+			strings.EqualFold(name, query) ||
+			strings.ToLower(r.SSHURL) == queryLower ||
+			strings.ToLower(r.CloneURL) == queryLower {
+			if !seen[r.FullName] {
+				matches = append(matches, r)
+				seen[r.FullName] = true
+			}
+		}
+	}
+
+	if len(matches) == 0 {
+		return ghRepo{}, fmt.Errorf("repository %q not found in imported repositories", query)
+	}
+	if len(matches) > 1 {
+		return ghRepo{}, fmt.Errorf("repository %q matches multiple imported repositories", query)
+	}
+	return matches[0], nil
 }
 
 func selectReposFromEnv(repos []ghRepo) ([]ghRepo, bool, error) {
