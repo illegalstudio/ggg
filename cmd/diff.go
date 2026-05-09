@@ -20,13 +20,16 @@ var diffCmd = &cobra.Command{
 			return err
 		}
 		if len(repos) == 0 {
+			if done, err := maybeJSON(map[string]any{"diffs": []any{}}); done {
+				return err
+			}
 			return nil
 		}
 
 		type diffEntry struct {
-			url     string
-			summary string
-			err     error
+			URL     string `json:"url"`
+			Summary string `json:"summary"`
+			Error   string `json:"error,omitempty"`
 		}
 
 		var entries []diffEntry
@@ -44,10 +47,13 @@ var diffCmd = &cobra.Command{
 			}
 
 			summary, err := repo.DiffSummary(fullPath)
-			entries = append(entries, diffEntry{url: r.URL, summary: summary, err: err})
+			entries = append(entries, diffEntry{URL: r.URL, Summary: summary, Error: errString(err)})
 		}
 
 		if len(entries) == 0 {
+			if done, err := maybeJSON(map[string]any{"diffs": []diffEntry{}}); done {
+				return err
+			}
 			fmt.Println(ui.Info.Render("All repositories are clean."))
 			return nil
 		}
@@ -60,14 +66,18 @@ var diffCmd = &cobra.Command{
 			return nil
 		}
 
+		if done, err := maybeJSON(map[string]any{"diffs": entries}); done {
+			return err
+		}
+
 		for _, entry := range entries {
-			if entry.err != nil {
-				fmt.Printf("  %s %s %s\n", ui.Error.Render("✗"), ui.Repo.Render(entry.url), ui.Error.Render(entry.err.Error()))
+			if entry.Error != "" {
+				fmt.Printf("  %s %s %s\n", ui.Error.Render("✗"), ui.Repo.Render(entry.URL), ui.Error.Render(entry.Error))
 				continue
 			}
 
-			fmt.Printf("\n  %s %s\n", ui.Repo.Render("●"), ui.Repo.Render(entry.url))
-			fmt.Printf("%s\n", entry.summary)
+			fmt.Printf("\n  %s %s\n", ui.Repo.Render("●"), ui.Repo.Render(entry.URL))
+			fmt.Printf("%s\n", entry.Summary)
 		}
 
 		return nil

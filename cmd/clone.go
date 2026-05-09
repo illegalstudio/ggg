@@ -21,6 +21,9 @@ var cloneCmd = &cobra.Command{
 			return err
 		}
 		if len(repos) == 0 {
+			if done, err := maybeJSON(map[string]any{"results": []any{}, "skipped": []any{}}); done {
+				return err
+			}
 			return nil
 		}
 
@@ -29,21 +32,42 @@ var cloneCmd = &cobra.Command{
 			repo     config.Repo
 			fullPath string
 		}
+		type skipped struct {
+			URL    string `json:"url"`
+			Path   string `json:"path,omitempty"`
+			Reason string `json:"reason"`
+		}
 		var jobs []cloneJob
+		var skips []skipped
 		for _, r := range repos {
 			fullPath, err := repo.FullPath(cfg.BaseDir, r)
 			if err != nil {
-				fmt.Println(ui.Error.Render(fmt.Sprintf("  ✗ Skipping %s: %v", r.URL, err)))
+				skips = append(skips, skipped{URL: r.URL, Reason: err.Error()})
+				if !jsonOutput {
+					fmt.Println(ui.Error.Render(fmt.Sprintf("  ✗ Skipping %s: %v", r.URL, err)))
+				}
 				continue
 			}
 			if repo.IsCloned(fullPath) {
-				fmt.Printf("  %s %s\n", ui.Muted.Render("●"), ui.Muted.Render("Already cloned: "+fullPath))
+				skips = append(skips, skipped{URL: r.URL, Path: fullPath, Reason: "already_cloned"})
+				if !jsonOutput {
+					fmt.Printf("  %s %s\n", ui.Muted.Render("●"), ui.Muted.Render("Already cloned: "+fullPath))
+				}
 				continue
 			}
 			jobs = append(jobs, cloneJob{repo: r, fullPath: fullPath})
 		}
 
+		type result struct {
+			URL   string `json:"url"`
+			Path  string `json:"path"`
+			Error string `json:"error,omitempty"`
+		}
+
 		if len(jobs) == 0 {
+			if done, err := maybeJSON(map[string]any{"results": []result{}, "skipped": skips}); done {
+				return err
+			}
 			return nil
 		}
 
@@ -55,12 +79,6 @@ var cloneCmd = &cobra.Command{
 			return nil
 		}
 
-		type result struct {
-			url  string
-			path string
-			err  error
-		}
-
 		title := fmt.Sprintf("Cloning %d repositories...", len(jobs))
 		if len(jobs) == 1 {
 			title = fmt.Sprintf("Cloning %s...", jobs[0].repo.URL)
@@ -68,22 +86,26 @@ var cloneCmd = &cobra.Command{
 
 		results, err := runParallelWithSpinner(jobs, title, func(job cloneJob) result {
 			return result{
-				url:  job.repo.URL,
-				path: job.fullPath,
-				err:  repo.Clone(job.repo.URL, job.fullPath),
+				URL:   job.repo.URL,
+				Path:  job.fullPath,
+				Error: errString(repo.Clone(job.repo.URL, job.fullPath)),
 			}
 		})
 		if err != nil {
 			return err
 		}
 
+		if done, err := maybeJSON(map[string]any{"results": results, "skipped": skips}); done {
+			return err
+		}
+
 		// Print results
 		fmt.Println()
 		for _, r := range results {
-			if r.err != nil {
-				fmt.Printf("  %s %s %s\n", ui.Error.Render("✗"), ui.Repo.Render(r.url), ui.Error.Render(r.err.Error()))
+			if r.Error != "" {
+				fmt.Printf("  %s %s %s\n", ui.Error.Render("✗"), ui.Repo.Render(r.URL), ui.Error.Render(r.Error))
 			} else {
-				fmt.Printf("  %s %s → %s\n", ui.Success.Render("✓"), ui.Repo.Render(r.url), ui.Path.Render(r.path))
+				fmt.Printf("  %s %s → %s\n", ui.Success.Render("✓"), ui.Repo.Render(r.URL), ui.Path.Render(r.Path))
 			}
 		}
 		return nil

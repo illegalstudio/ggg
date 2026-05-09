@@ -1,5 +1,19 @@
 # Commands Reference
 
+## Global Flags
+
+| Flag | Description |
+|------|-------------|
+| `--json` | Emit machine-readable JSON instead of styled text for supported commands. Suppresses spinners and bulk-confirmation prompts (auto-confirms), and refuses interactive disambiguation when a query matches multiple repositories. |
+
+The exact JSON shape depends on the command but follows consistent conventions:
+
+- Bulk operations (`clone`, `pull`, `push`, `stash`, `checkout`, `diff`, `status`, `outdated`, `list`) emit a `{"results": [...]}` or `{"repos": [...]}` array.
+- Single-target operations (`add`, `remove`, `cd`, `init`, `export`, `shell-init`) emit a small object describing the action and its target.
+- Per-item errors are reported as a non-empty `"error"` string field on the item; the command's overall exit code is unaffected.
+- Commands that launch external applications (`config`, `open`, `browse`) do not support `--json`; they return a JSON error object with a non-zero exit code.
+- `ggg import --json` requires both an account and one repository argument, for example `ggg --json import myorg myrepo`.
+
 ## `ggg init`
 
 Generate a default configuration file.
@@ -273,6 +287,9 @@ ggg import
 # Import from a specific org or user
 ggg import myorg
 
+# Import a single repo from a specific org or user
+ggg import myorg myrepo
+
 # Use HTTPS URLs and assign to a group
 ggg import myorg --http --group work
 ```
@@ -282,8 +299,10 @@ ggg import myorg --http --group work
 | `--http` | | Use HTTPS URLs instead of SSH. |
 | `--group` | `-g` | Assign imported repos to a group. |
 
-Requires [`gh`](https://cli.github.com) to be installed. Presents an interactive multi-select to choose which repos to import. Already-configured repos are skipped.
+Requires [`gh`](https://cli.github.com) to be installed. Without a repository argument, presents an interactive multi-select to choose which repos to import. Already-configured repos are skipped.
 In the repository picker, press `/` to filter, `space` to toggle a repo, and `enter` to confirm.
+
+When a repository argument is provided, it must match a repo name (`myrepo`), full name (`myorg/myrepo`), SSH URL, or HTTPS URL exactly. In `--json` mode this repository argument is required; JSON import never imports all repositories implicitly.
 
 ---
 

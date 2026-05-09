@@ -11,11 +11,11 @@ import (
 )
 
 type outdatedResult struct {
-	url    string
-	branch string
-	behind int
-	err    error
-	skip   string // "not_cloned", "fetch_err", ""
+	URL    string `json:"url"`
+	Branch string `json:"branch,omitempty"`
+	Behind int    `json:"behind"`
+	Skip   string `json:"skip,omitempty"` // "not_cloned", "fetch_err", ""
+	Error  string `json:"error,omitempty"`
 }
 
 var outdatedCmd = &cobra.Command{
@@ -29,40 +29,47 @@ var outdatedCmd = &cobra.Command{
 			return err
 		}
 		if len(repos) == 0 {
+			if done, err := maybeJSON(map[string]any{"repos": []outdatedResult{}}); done {
+				return err
+			}
 			return nil
 		}
 
 		results, err := runParallelWithSpinner(repos, "Fetching from remotes...", func(r config.Repo) outdatedResult {
-			res := outdatedResult{url: r.URL}
+			res := outdatedResult{URL: r.URL}
 
 			fullPath, err := repo.FullPath(cfg.BaseDir, r)
 			if err != nil {
-				res.err = err
+				res.Error = err.Error()
 				return res
 			}
 
 			if !repo.IsCloned(fullPath) {
-				res.skip = "not_cloned"
+				res.Skip = "not_cloned"
 				return res
 			}
 
 			if err := repo.Fetch(fullPath); err != nil {
-				res.skip = "fetch_err"
-				res.err = err
+				res.Skip = "fetch_err"
+				res.Error = err.Error()
 				return res
 			}
 
-			res.branch, _ = repo.CurrentBranch(fullPath)
-			_, res.behind, _ = repo.AheadBehind(fullPath)
+			res.Branch, _ = repo.CurrentBranch(fullPath)
+			_, res.Behind, _ = repo.AheadBehind(fullPath)
 			return res
 		})
 		if err != nil {
 			return err
 		}
 
+		if done, err := maybeJSON(map[string]any{"repos": results}); done {
+			return err
+		}
+
 		outdated := 0
 		for _, r := range results {
-			if r.behind > 0 {
+			if r.Behind > 0 {
 				outdated++
 			}
 		}
@@ -75,19 +82,19 @@ var outdatedCmd = &cobra.Command{
 		fmt.Println(ui.Title.Render("Outdated Repositories"))
 		fmt.Println()
 		for _, r := range results {
-			if r.skip == "not_cloned" {
+			if r.Skip == "not_cloned" {
 				continue
 			}
-			if r.skip == "fetch_err" {
-				fmt.Printf("  %s %s %s\n", ui.Error.Render("✗"), ui.Repo.Render(r.url), ui.Muted.Render("(fetch failed)"))
+			if r.Skip == "fetch_err" {
+				fmt.Printf("  %s %s %s\n", ui.Error.Render("✗"), ui.Repo.Render(r.URL), ui.Muted.Render("(fetch failed)"))
 				continue
 			}
-			if r.behind > 0 {
+			if r.Behind > 0 {
 				fmt.Printf("  %s %s [%s] %s\n",
 					ui.Error.Render("↓"),
-					ui.Repo.Render(r.url),
-					ui.Info.Render(r.branch),
-					ui.Error.Render(fmt.Sprintf("%d commits behind", r.behind)),
+					ui.Repo.Render(r.URL),
+					ui.Info.Render(r.Branch),
+					ui.Error.Render(fmt.Sprintf("%d commits behind", r.Behind)),
 				)
 			}
 		}

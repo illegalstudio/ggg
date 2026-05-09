@@ -28,7 +28,9 @@ func loadRepos(cmd *cobra.Command) (*config.Config, []config.Repo, error) {
 	repos := filterByGroup(cfg.Repos, group)
 
 	if len(repos) == 0 {
-		fmt.Println(ui.Info.Render("No repositories configured."))
+		if !jsonOutput {
+			fmt.Println(ui.Info.Render("No repositories configured."))
+		}
 		return cfg, nil, nil
 	}
 
@@ -36,8 +38,11 @@ func loadRepos(cmd *cobra.Command) (*config.Config, []config.Repo, error) {
 }
 
 // confirmAll shows a select prompt asking the user to confirm an action on all repos.
-// Returns true if confirmed, false if aborted.
+// Returns true if confirmed, false if aborted. In JSON mode, auto-confirms.
 func confirmAll(title, yesLabel string) (bool, error) {
+	if jsonOutput {
+		return true, nil
+	}
 	var choice string
 	err := huh.NewSelect[string]().
 		Title(title).
@@ -145,6 +150,10 @@ func matchRepoIndices(repos []config.Repo, query string) []int {
 }
 
 func selectRepoIndex(repos []config.Repo, indices []int, title string) (int, error) {
+	if jsonOutput {
+		return -1, fmt.Errorf("%s: refusing interactive prompt in --json mode (be more specific)", title)
+	}
+
 	options := make([]huh.Option[int], len(indices))
 	for i, idx := range indices {
 		options[i] = huh.NewOption(repoChoiceLabel(repos[idx]), idx)
@@ -197,6 +206,11 @@ func runParallelWithSpinner[T any, R any](jobs []T, title string, runner func(T)
 			}(i, job)
 		}
 		wg.Wait()
+	}
+
+	if jsonOutput {
+		action()
+		return results, nil
 	}
 
 	if err := spinner.New().Title(title).Action(action).Run(); err != nil {

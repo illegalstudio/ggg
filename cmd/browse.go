@@ -19,6 +19,10 @@ var browseCmd = &cobra.Command{
 	GroupID: GroupRepo,
 	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if jsonOutput {
+			return unsupportedJSON("browse")
+		}
+
 		cfg, err := config.Load()
 		if err != nil {
 			return err

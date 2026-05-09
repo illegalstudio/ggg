@@ -23,6 +23,9 @@ var checkoutCmd = &cobra.Command{
 			return err
 		}
 		if len(repos) == 0 {
+			if done, err := maybeJSON(map[string]any{"branch": branch, "results": []any{}}); done {
+				return err
+			}
 			return nil
 		}
 
@@ -33,6 +36,12 @@ var checkoutCmd = &cobra.Command{
 			repo     config.Repo
 			fullPath string
 		}
+		type result struct {
+			URL    string `json:"url"`
+			Branch string `json:"branch"`
+			Error  string `json:"error,omitempty"`
+		}
+
 		var jobs []checkoutJob
 
 		for _, r := range repos {
@@ -50,6 +59,9 @@ var checkoutCmd = &cobra.Command{
 		}
 
 		if len(jobs) == 0 {
+			if done, err := maybeJSON(map[string]any{"branch": branch, "results": []result{}}); done {
+				return err
+			}
 			fmt.Println(ui.Info.Render(fmt.Sprintf("No repositories have branch %q.", branch)))
 			return nil
 		}
@@ -62,11 +74,6 @@ var checkoutCmd = &cobra.Command{
 			return nil
 		}
 
-		type result struct {
-			url string
-			err error
-		}
-
 		title := fmt.Sprintf("Checking out %q in %d repositories...", branch, len(jobs))
 		if len(jobs) == 1 {
 			title = fmt.Sprintf("Checking out %q in %s...", branch, jobs[0].repo.URL)
@@ -74,20 +81,25 @@ var checkoutCmd = &cobra.Command{
 
 		results, err := runParallelWithSpinner(jobs, title, func(job checkoutJob) result {
 			return result{
-				url: job.repo.URL,
-				err: repo.Checkout(job.fullPath, branch),
+				URL:    job.repo.URL,
+				Branch: branch,
+				Error:  errString(repo.Checkout(job.fullPath, branch)),
 			}
 		})
 		if err != nil {
 			return err
 		}
 
+		if done, err := maybeJSON(map[string]any{"branch": branch, "results": results}); done {
+			return err
+		}
+
 		fmt.Println()
 		for _, r := range results {
-			if r.err != nil {
-				fmt.Printf("  %s %s %s\n", ui.Error.Render("✗"), ui.Repo.Render(r.url), ui.Error.Render(r.err.Error()))
+			if r.Error != "" {
+				fmt.Printf("  %s %s %s\n", ui.Error.Render("✗"), ui.Repo.Render(r.URL), ui.Error.Render(r.Error))
 			} else {
-				fmt.Printf("  %s %s → %s\n", ui.Success.Render("✓"), ui.Repo.Render(r.url), ui.Info.Render(branch))
+				fmt.Printf("  %s %s → %s\n", ui.Success.Render("✓"), ui.Repo.Render(r.URL), ui.Info.Render(branch))
 			}
 		}
 		return nil

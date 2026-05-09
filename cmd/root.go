@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"go-git-get/config"
 
@@ -16,8 +18,9 @@ const (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "ggg",
-	Short: "Go Git Get — clone and manage git repositories from a config file",
+	Use:           "ggg",
+	Short:         "Go Git Get — clone and manage git repositories from a config file",
+	SilenceErrors: true,
 	Long: `Go Git Get — clone and manage git repositories from a config file.
 
 Shell Integration:
@@ -32,7 +35,13 @@ Shell Integration:
 Use "ggg <command> --help" for details on any command.`,
 }
 
+func init() {
+	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output in JSON format (suppresses spinners and prompts)")
+}
+
 func Execute() {
+	rootCmd.SilenceUsage = jsonFlagRequested(os.Args[1:])
+
 	rootCmd.AddGroup(
 		&cobra.Group{ID: GroupConfig, Title: "Configuration:"},
 		&cobra.Group{ID: GroupRepo, Title: "Repository Operations:"},
@@ -42,9 +51,31 @@ func Execute() {
 	rootCmd.SetCompletionCommandGroupID(GroupConfig)
 
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		if jsonOutput {
+			var payloadErr interface{ JSONPayload() any }
+			if errors.As(err, &payloadErr) {
+				_ = emitJSON(payloadErr.JSONPayload())
+			} else {
+				_ = emitJSON(map[string]any{"error": err.Error()})
+			}
+		} else {
+			fmt.Fprintln(os.Stderr, err)
+		}
 		os.Exit(1)
 	}
+}
+
+func jsonFlagRequested(args []string) bool {
+	for _, arg := range args {
+		if arg == "--json" {
+			return true
+		}
+		if strings.HasPrefix(arg, "--json=") {
+			value := strings.TrimPrefix(arg, "--json=")
+			return value != "false" && value != "0"
+		}
+	}
+	return false
 }
 
 // filterByGroup filters repos by group if group is non-empty.

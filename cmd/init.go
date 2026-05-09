@@ -25,6 +25,10 @@ var initCmd = &cobra.Command{
 			return err
 		}
 
+		if done, err := maybeJSON(map[string]any{"created": true, "path": path}); done {
+			return err
+		}
+
 		fmt.Println(ui.Success.Render("✓") + " Config file created at " + ui.Path.Render(path))
 		return nil
 	},

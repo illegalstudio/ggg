@@ -27,6 +27,10 @@ Examples:
 	GroupID: GroupRepo,
 	Args:    cobra.RangeArgs(1, 2),
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if jsonOutput {
+			return unsupportedJSON("open")
+		}
+
 		cfg, err := config.Load()
 		if err != nil {
 			return err

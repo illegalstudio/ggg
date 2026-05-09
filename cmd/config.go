@@ -16,6 +16,10 @@ var configCmd = &cobra.Command{
 	Short:   "Open the configuration file in your default editor",
 	GroupID: GroupConfig,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		if jsonOutput {
+			return unsupportedJSON("config")
+		}
+
 		path := config.ConfigPath()
 
 		if _, err := os.Stat(path); os.IsNotExist(err) {

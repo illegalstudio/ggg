@@ -96,6 +96,29 @@ var validateCmd = &cobra.Command{
 			}
 		}
 
+		// Build JSON-friendly representation of conflicts.
+		type conflictOut struct {
+			Kind string   `json:"kind"`
+			Key  string   `json:"key"`
+			URLs []string `json:"urls"`
+		}
+		conflictsOut := make([]conflictOut, 0, len(conflicts))
+		for _, c := range conflicts {
+			urls := make([]string, len(c.indices))
+			for i, idx := range c.indices {
+				urls[i] = cfg.Repos[idx].URL
+			}
+			conflictsOut = append(conflictsOut, conflictOut{Kind: c.kind, Key: c.key, URLs: urls})
+		}
+
+		if done, err := maybeJSON(map[string]any{
+			"valid":     len(warnings) == 0 && len(conflicts) == 0,
+			"warnings":  warnings,
+			"conflicts": conflictsOut,
+		}); done {
+			return err
+		}
+
 		// Print results
 		fmt.Println(ui.Title.Render("Validate"))
 		fmt.Println()
@@ -106,12 +129,8 @@ var validateCmd = &cobra.Command{
 			return nil
 		}
 
-		for _, c := range conflicts {
-			urls := make([]string, len(c.indices))
-			for i, idx := range c.indices {
-				urls[i] = cfg.Repos[idx].URL
-			}
-			fmt.Printf("  %s %s: %s → %s\n", ui.Error.Render("✗"), ui.Muted.Render(c.kind), ui.Path.Render(c.key), ui.Repo.Render(strings.Join(urls, ", ")))
+		for _, c := range conflictsOut {
+			fmt.Printf("  %s %s: %s → %s\n", ui.Error.Render("✗"), ui.Muted.Render(c.Kind), ui.Path.Render(c.Key), ui.Repo.Render(strings.Join(c.URLs, ", ")))
 		}
 		for _, w := range warnings {
 			fmt.Printf("  %s %s\n", ui.Error.Render("✗"), ui.Muted.Render(w))

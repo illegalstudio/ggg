@@ -60,14 +60,21 @@ Then use "gcd <name>" to navigate to a repository.`,
 			shell = args[0]
 		}
 
+		var script string
 		switch shell {
 		case "bash", "zsh":
-			fmt.Print(shellFunction)
+			script = shellFunction
 		case "fish":
-			fmt.Print(fishFunction)
+			script = fishFunction
 		default:
 			return fmt.Errorf("unsupported shell: %s (use bash, zsh, or fish)", shell)
 		}
+
+		if done, err := maybeJSON(map[string]any{"shell": shell, "script": script}); done {
+			return err
+		}
+
+		fmt.Print(script)
 		return nil
 	},
 }

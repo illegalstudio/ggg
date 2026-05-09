@@ -15,7 +15,7 @@ var addCmd = &cobra.Command{
 	Use:     "add <url>",
 	Short:   "Add a repository to the configuration",
 	GroupID: GroupConfig,
-	Args:  cobra.ExactArgs(1),
+	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		url := args[0]
 		group, _ := cmd.Flags().GetString("group")
@@ -40,7 +40,11 @@ var addCmd = &cobra.Command{
 			return err
 		}
 
-		fmt.Printf("  %s Added %s\n", ui.Success.Render("✓"), ui.Repo.Render(url))
+		out := map[string]any{"added": true, "url": url}
+
+		if !jsonOutput {
+			fmt.Printf("  %s Added %s\n", ui.Success.Render("✓"), ui.Repo.Render(url))
+		}
 
 		if clone {
 			cfgFull, err := config.Load()
@@ -53,7 +57,14 @@ var addCmd = &cobra.Command{
 				return err
 			}
 
+			out["path"] = fullPath
+
 			if repo.IsCloned(fullPath) {
+				out["cloned"] = true
+				out["already_cloned"] = true
+				if done, err := maybeJSON(out); done {
+					return err
+				}
 				fmt.Printf("  %s %s\n", ui.Muted.Render("●"), ui.Muted.Render("Already cloned: "+fullPath))
 				return nil
 			}
@@ -63,17 +74,34 @@ var addCmd = &cobra.Command{
 				cloneErr = repo.Clone(url, fullPath)
 			}
 
-			if err := spinner.New().Title(fmt.Sprintf("Cloning %s...", url)).Action(action).Run(); err != nil {
-				return err
+			if jsonOutput {
+				action()
+			} else {
+				if err := spinner.New().Title(fmt.Sprintf("Cloning %s...", url)).Action(action).Run(); err != nil {
+					return err
+				}
 			}
 
 			if cloneErr != nil {
+				out["cloned"] = false
+				out["error"] = cloneErr.Error()
+				if done, err := maybeJSON(out); done {
+					return err
+				}
 				fmt.Printf("  %s %s %s\n", ui.Error.Render("✗"), ui.Repo.Render(url), ui.Error.Render(cloneErr.Error()))
 				return cloneErr
 			}
+			out["cloned"] = true
+			if done, err := maybeJSON(out); done {
+				return err
+			}
 			fmt.Printf("  %s %s → %s\n", ui.Success.Render("✓"), ui.Repo.Render(url), ui.Path.Render(fullPath))
+			return nil
 		}
 
+		if done, err := maybeJSON(out); done {
+			return err
+		}
 		return nil
 	},
 }
