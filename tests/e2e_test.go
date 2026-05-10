@@ -609,7 +609,7 @@ func buildBinary(t *testing.T) string {
 			binaryPath += ".exe"
 		}
 
-		cmd := exec.Command("go", "build", "-o", binaryPath, ".")
+		cmd := exec.Command("go", "build", "-o", binaryPath, "./cmd/ggg")
 		cmd.Dir = moduleRoot(t)
 		cmd.Env = append([]string{}, buildBaseEnv...)
 		cmd.Env = append(cmd.Env, "GOCACHE="+filepath.Join(dir, "gocache"))

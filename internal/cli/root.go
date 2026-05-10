@@ -1,4 +1,4 @@
-package cmd
+package cli
 
 import (
 	"errors"
@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"go-git-get/config"
+	"go-git-get/internal/config"
 
 	"github.com/spf13/cobra"
 )

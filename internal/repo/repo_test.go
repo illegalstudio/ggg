@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"go-git-get/config"
+	"go-git-get/internal/config"
 	"go-git-get/internal/testutil"
 )
 

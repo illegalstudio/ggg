@@ -1,23 +1,24 @@
-package cmd
+package cli
 
 import (
 	"fmt"
 
-	"go-git-get/config"
-	"go-git-get/repo"
-	"go-git-get/ui"
+	"go-git-get/internal/config"
+	"go-git-get/internal/repo"
+	"go-git-get/internal/ui"
 
 	"github.com/spf13/cobra"
 )
 
-var pullCmd = &cobra.Command{
-	Use:     "pull [filter]",
-	Short:   "Pull latest changes (all or filtered repos, only if clean)",
+var pushCmd = &cobra.Command{
+	Use:     "push [filter]",
+	Short:   "Push commits to remote for repositories that are ahead",
 	GroupID: GroupRepo,
 	Args:    cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		type result struct {
 			URL   string `json:"url"`
+			Ahead int    `json:"ahead"`
 			Error string `json:"error,omitempty"`
 		}
 
@@ -32,13 +33,13 @@ var pullCmd = &cobra.Command{
 			return nil
 		}
 
-		type pullJob struct {
+		type pushJob struct {
 			repo     config.Repo
 			fullPath string
-			strategy string
+			ahead    int
 		}
 
-		var jobs []pullJob
+		var jobs []pushJob
 
 		for _, r := range repos {
 			fullPath, err := repo.FullPath(cfg.BaseDir, r)
@@ -48,26 +49,33 @@ var pullCmd = &cobra.Command{
 			if !repo.IsCloned(fullPath) {
 				continue
 			}
-			dirty, err := repo.IsDirty(fullPath)
+			ahead, _, err := repo.AheadBehind(fullPath)
 			if err != nil {
 				continue
 			}
-			if dirty {
+			if ahead == 0 {
 				continue
 			}
-			strategy := string(cfg.ResolvePullStrategy(r))
-			jobs = append(jobs, pullJob{repo: r, fullPath: fullPath, strategy: strategy})
+			jobs = append(jobs, pushJob{repo: r, fullPath: fullPath, ahead: ahead})
 		}
 
 		if len(jobs) == 0 {
 			if done, err := maybeJSON(map[string]any{"results": []result{}}); done {
 				return err
 			}
-			fmt.Println(ui.Info.Render("No repositories to pull (all clean, dirty, or not cloned)."))
+			fmt.Println(ui.Info.Render("All repositories are up to date — nothing to push."))
 			return nil
 		}
 
-		ok, err := confirmBulkAction(filter, len(jobs), "Pull %d repositories?", "Yes, pull all")
+		// Show what will be pushed (skipped in JSON mode)
+		if !jsonOutput {
+			for _, j := range jobs {
+				fmt.Printf("  %s %s %s\n", ui.Info.Render("↑"), ui.Repo.Render(j.repo.URL), ui.Muted.Render(fmt.Sprintf("(%d commits ahead)", j.ahead)))
+			}
+			fmt.Println()
+		}
+
+		ok, err := confirmBulkAction(filter, len(jobs), "Push %d repositories?", "Yes, push all")
 		if err != nil {
 			return err
 		}
@@ -75,13 +83,17 @@ var pullCmd = &cobra.Command{
 			return nil
 		}
 
-		title := fmt.Sprintf("Pulling %d repositories...", len(jobs))
+		title := fmt.Sprintf("Pushing %d repositories...", len(jobs))
 		if len(jobs) == 1 {
-			title = fmt.Sprintf("Pulling %s...", jobs[0].repo.URL)
+			title = fmt.Sprintf("Pushing %s...", jobs[0].repo.URL)
 		}
 
-		results, err := runParallelWithSpinner(jobs, title, func(job pullJob) result {
-			return result{URL: job.repo.URL, Error: errString(repo.Pull(job.fullPath, job.strategy))}
+		results, err := runParallelWithSpinner(jobs, title, func(job pushJob) result {
+			return result{
+				URL:   job.repo.URL,
+				Ahead: job.ahead,
+				Error: errString(repo.Push(job.fullPath)),
+			}
 		})
 		if err != nil {
 			return err
@@ -91,7 +103,6 @@ var pullCmd = &cobra.Command{
 			return err
 		}
 
-		// Print results
 		fmt.Println()
 		for _, r := range results {
 			if r.Error != "" {
@@ -105,7 +116,7 @@ var pullCmd = &cobra.Command{
 }
 
 func init() {
-	pullCmd.Flags().StringP("group", "g", "", "Pull only repos in this group")
-	pullCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
-	rootCmd.AddCommand(pullCmd)
+	pushCmd.Flags().StringP("group", "g", "", "Push only repos in this group")
+	pushCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
+	rootCmd.AddCommand(pushCmd)
 }

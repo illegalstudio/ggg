@@ -1,12 +1,12 @@
-package cmd
+package cli
 
 import (
 	"fmt"
 	"os"
 	"path/filepath"
 
-	"go-git-get/config"
-	"go-git-get/ui"
+	"go-git-get/internal/config"
+	"go-git-get/internal/ui"
 
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"

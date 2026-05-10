@@ -1,4 +1,4 @@
-package cmd
+package cli
 
 import (
 	"fmt"
@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"strings"
 
-	"go-git-get/config"
-	"go-git-get/ui"
+	"go-git-get/internal/config"
+	"go-git-get/internal/ui"
 
 	"github.com/spf13/cobra"
 )

@@ -1,9 +1,9 @@
-package cmd
+package cli
 
 import (
 	"testing"
 
-	"go-git-get/config"
+	"go-git-get/internal/config"
 )
 
 func TestFilterByGroup_Empty(t *testing.T) {

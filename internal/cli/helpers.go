@@ -1,4 +1,4 @@
-package cmd
+package cli
 
 import (
 	"fmt"
@@ -7,9 +7,9 @@ import (
 	"strings"
 	"sync"
 
-	"go-git-get/config"
-	"go-git-get/repo"
-	"go-git-get/ui"
+	"go-git-get/internal/config"
+	"go-git-get/internal/repo"
+	"go-git-get/internal/ui"
 
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/huh/spinner"

@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"go-git-get/config"
+	"go-git-get/internal/config"
 )
 
 // DerivePathFromURL extracts a filesystem path from a git URL.
