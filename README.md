@@ -13,7 +13,7 @@ Or build from source:
 ```bash
 git clone https://github.com/illegalstudio/ggg.git
 cd ggg
-go build -o ggg ./cmd/ggg
+make && make install
 ```
 
 ## Quick Start

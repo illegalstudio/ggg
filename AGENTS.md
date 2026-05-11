@@ -107,9 +107,9 @@ repos:
 ## Build
 
 ```bash
-go build -o ggg ./cmd/ggg
+make && make install
 ```
 
-Or use the `Makefile`: `make build`, `make install`, `make test`, `make vet`, `make fmt`, `make clean`.
+Other Makefile targets: `make build`, `make test`, `make vet`, `make fmt`, `make clean`.
 
 The `ggg` binary is in `.gitignore`.
