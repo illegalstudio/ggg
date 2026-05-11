@@ -198,3 +198,38 @@ func TestRemoteReachable_InvalidURL(t *testing.T) {
 		t.Error("invalid remote should not be reachable")
 	}
 }
+
+func TestWorktrees_None(t *testing.T) {
+	dir := initTestRepo(t)
+	wts, err := Worktrees(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(wts) != 0 {
+		t.Errorf("Worktrees with no linked worktrees = %d, want 0", len(wts))
+	}
+}
+
+func TestWorktrees_LinkedAreReturned(t *testing.T) {
+	home := testutil.SetupHome(t)
+	dir := testutil.InitGitRepoInHome(t, home)
+
+	wtPath := filepath.Join(t.TempDir(), "feature-wt")
+	testutil.RunGit(t, dir, home, "worktree", "add", "-b", "feature", wtPath)
+
+	wts, err := Worktrees(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(wts) != 1 {
+		t.Fatalf("Worktrees = %d, want 1", len(wts))
+	}
+	if wts[0].Branch != "feature" {
+		t.Errorf("Worktree branch = %q, want %q", wts[0].Branch, "feature")
+	}
+	// Path returned by git worktree list may resolve symlinks (e.g. /var → /private/var on macOS),
+	// so compare basenames rather than full paths.
+	if filepath.Base(wts[0].Path) != filepath.Base(wtPath) {
+		t.Errorf("Worktree path basename = %q, want %q", filepath.Base(wts[0].Path), filepath.Base(wtPath))
+	}
+}

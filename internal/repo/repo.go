@@ -172,6 +172,53 @@ func Push(repoPath string) error {
 	return nil
 }
 
+// Worktree describes a linked git worktree.
+type Worktree struct {
+	Path   string
+	Branch string
+}
+
+// Worktrees returns the linked worktrees for the repo at repoPath, excluding
+// the main worktree. The main worktree is always reported first by
+// `git worktree list`, so we drop it and return the rest.
+func Worktrees(repoPath string) ([]Worktree, error) {
+	cmd := exec.Command("git", "worktree", "list", "--porcelain")
+	cmd.Dir = repoPath
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("git worktree list failed: %w", err)
+	}
+
+	var all []Worktree
+	var current Worktree
+	flush := func() {
+		if current.Path != "" {
+			all = append(all, current)
+		}
+		current = Worktree{}
+	}
+	for _, line := range strings.Split(string(out), "\n") {
+		if line == "" {
+			flush()
+			continue
+		}
+		switch {
+		case strings.HasPrefix(line, "worktree "):
+			current.Path = strings.TrimPrefix(line, "worktree ")
+		case strings.HasPrefix(line, "branch "):
+			current.Branch = strings.TrimPrefix(strings.TrimPrefix(line, "branch "), "refs/heads/")
+		case line == "detached":
+			current.Branch = "(detached)"
+		}
+	}
+	flush()
+
+	if len(all) <= 1 {
+		return nil, nil
+	}
+	return all[1:], nil
+}
+
 // Clone clones a git repository to the given path (quiet mode, no stdout).
 func Clone(repoURL, destPath string) error {
 	if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
