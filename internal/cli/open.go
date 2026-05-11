@@ -13,8 +13,9 @@ import (
 )
 
 var openCmd = &cobra.Command{
-	Use:   "open <name> [editor]",
-	Short: "Open a repository in an editor",
+	Use:               "open <name> [editor]",
+	Short:             "Open a repository in an editor",
+	ValidArgsFunction: repoCompletion,
 	Long: `Open a repository directory in an editor.
 
 Without an editor argument, uses $EDITOR, $VISUAL, or vi as fallback.

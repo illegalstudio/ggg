@@ -34,7 +34,7 @@
 - [x] `ggg import [org]` command — import repos from GitHub via `gh` CLI
 - [x] `ggg export` command — export config in a shareable format
 - [x] Shell alias — `gcd` shell function for navigation without `eval`
-- [ ] Dynamic completions — repo name autocompletion for bash/zsh/fish
+- [x] Dynamic completions — repo name autocompletion for bash/zsh/fish
 - [ ] Config watch — `--watch` flag on status with periodic refresh
 - [ ] Dirty notifications — shell prompt integration (starship/p10k)
 

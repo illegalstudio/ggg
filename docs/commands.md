@@ -180,10 +180,10 @@ This only removes the entry from the config file — it does **not** delete the 
 
 ## `ggg cd`
 
-Print a `cd` command for a repository. Designed to be used with `eval` for shell integration.
+Print the path for a repository. Designed to be used by shell integration.
 
 ```bash
-eval $(ggg cd myrepo)
+cd "$(ggg cd myrepo)"
 ```
 
 Fails if the repo is not cloned. Supports the same matching behavior as `clone` and `remove`.
@@ -397,7 +397,7 @@ Uses `$EDITOR`, `$VISUAL`, or `vi` as fallback.
 
 ## `ggg shell-init`
 
-Print shell integration script for the `gcd` alias.
+Print shell integration script for the `gcd` alias and command completion.
 
 ```bash
 eval "$(ggg shell-init bash)"    # add to ~/.bashrc
@@ -405,7 +405,7 @@ eval "$(ggg shell-init zsh)"     # add to ~/.zshrc
 ggg shell-init fish | source     # add to ~/.config/fish/config.fish
 ```
 
-Generates a `gcd` function for quick directory navigation. See [Shell Integration](shell-integration.md) for details.
+Generates a `gcd` function for quick directory navigation and installs Cobra-powered completion for commands, flags, repository names, group names, and `checkout` branch names. See [Shell Integration](shell-integration.md) for details.
 
 ---
 

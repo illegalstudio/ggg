@@ -110,5 +110,6 @@ func init() {
 	addCmd.Flags().StringP("group", "g", "", "Assign the repo to a group")
 	addCmd.Flags().StringP("path", "p", "", "Custom clone path (relative to base_dir)")
 	addCmd.Flags().BoolP("clone", "c", false, "Clone the repo immediately after adding")
+	registerGroupCompletion(addCmd)
 	rootCmd.AddCommand(addCmd)
 }

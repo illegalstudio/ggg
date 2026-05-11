@@ -12,10 +12,11 @@ import (
 )
 
 var listCmd = &cobra.Command{
-	Use:     "list [filter]",
-	Short:   "List configured repositories and their status",
-	GroupID: GroupInfo,
-	Args:    cobra.MaximumNArgs(1),
+	Use:               "list [filter]",
+	Short:             "List configured repositories and their status",
+	GroupID:           GroupInfo,
+	Args:              cobra.MaximumNArgs(1),
+	ValidArgsFunction: repoCompletion,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		showGroups, _ := cmd.Flags().GetBool("groups")
 		if showGroups {
@@ -130,5 +131,7 @@ func init() {
 	listCmd.Flags().StringP("group", "g", "", "List only repos in this group")
 	listCmd.Flags().Bool("groups", false, "Show available groups")
 	listCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
+	registerGroupCompletion(listCmd)
+	registerFilterCompletion(listCmd)
 	rootCmd.AddCommand(listCmd)
 }

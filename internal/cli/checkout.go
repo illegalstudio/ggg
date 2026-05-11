@@ -11,10 +11,11 @@ import (
 )
 
 var checkoutCmd = &cobra.Command{
-	Use:     "checkout <branch> [filter]",
-	Short:   "Checkout a branch in repositories that have it",
-	GroupID: GroupRepo,
-	Args:    cobra.RangeArgs(1, 2),
+	Use:               "checkout <branch> [filter]",
+	Short:             "Checkout a branch in repositories that have it",
+	GroupID:           GroupRepo,
+	Args:              cobra.RangeArgs(1, 2),
+	ValidArgsFunction: checkoutCompletion,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		branch := args[0]
 
@@ -109,5 +110,7 @@ var checkoutCmd = &cobra.Command{
 func init() {
 	checkoutCmd.Flags().StringP("group", "g", "", "Checkout only in repos in this group")
 	checkoutCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
+	registerGroupCompletion(checkoutCmd)
+	registerFilterCompletion(checkoutCmd)
 	rootCmd.AddCommand(checkoutCmd)
 }

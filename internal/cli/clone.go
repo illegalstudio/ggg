@@ -11,10 +11,11 @@ import (
 )
 
 var cloneCmd = &cobra.Command{
-	Use:     "clone [filter]",
-	Short:   "Clone repositories (all or filtered)",
-	GroupID: GroupRepo,
-	Args:    cobra.MaximumNArgs(1),
+	Use:               "clone [filter]",
+	Short:             "Clone repositories (all or filtered)",
+	GroupID:           GroupRepo,
+	Args:              cobra.MaximumNArgs(1),
+	ValidArgsFunction: repoCompletion,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, repos, filter, err := resolveBulkRepos(cmd, args)
 		if err != nil {
@@ -115,5 +116,7 @@ var cloneCmd = &cobra.Command{
 func init() {
 	cloneCmd.Flags().StringP("group", "g", "", "Clone only repos in this group")
 	cloneCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
+	registerGroupCompletion(cloneCmd)
+	registerFilterCompletion(cloneCmd)
 	rootCmd.AddCommand(cloneCmd)
 }

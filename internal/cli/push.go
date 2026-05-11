@@ -11,10 +11,11 @@ import (
 )
 
 var pushCmd = &cobra.Command{
-	Use:     "push [filter]",
-	Short:   "Push commits to remote for repositories that are ahead",
-	GroupID: GroupRepo,
-	Args:    cobra.MaximumNArgs(1),
+	Use:               "push [filter]",
+	Short:             "Push commits to remote for repositories that are ahead",
+	GroupID:           GroupRepo,
+	Args:              cobra.MaximumNArgs(1),
+	ValidArgsFunction: repoCompletion,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		type result struct {
 			URL   string `json:"url"`
@@ -118,5 +119,7 @@ var pushCmd = &cobra.Command{
 func init() {
 	pushCmd.Flags().StringP("group", "g", "", "Push only repos in this group")
 	pushCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
+	registerGroupCompletion(pushCmd)
+	registerFilterCompletion(pushCmd)
 	rootCmd.AddCommand(pushCmd)
 }

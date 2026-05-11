@@ -10,10 +10,11 @@ import (
 )
 
 var diffCmd = &cobra.Command{
-	Use:     "diff [filter]",
-	Short:   "Show a summary of changed files in dirty repositories",
-	GroupID: GroupRepo,
-	Args:    cobra.MaximumNArgs(1),
+	Use:               "diff [filter]",
+	Short:             "Show a summary of changed files in dirty repositories",
+	GroupID:           GroupRepo,
+	Args:              cobra.MaximumNArgs(1),
+	ValidArgsFunction: repoCompletion,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, repos, filter, err := resolveBulkRepos(cmd, args)
 		if err != nil {
@@ -87,5 +88,7 @@ var diffCmd = &cobra.Command{
 func init() {
 	diffCmd.Flags().StringP("group", "g", "", "Show diff only for repos in this group")
 	diffCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
+	registerGroupCompletion(diffCmd)
+	registerFilterCompletion(diffCmd)
 	rootCmd.AddCommand(diffCmd)
 }

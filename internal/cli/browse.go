@@ -14,10 +14,11 @@ import (
 )
 
 var browseCmd = &cobra.Command{
-	Use:     "browse <name>",
-	Short:   "Open a repository's remote URL in the browser",
-	GroupID: GroupRepo,
-	Args:    cobra.ExactArgs(1),
+	Use:               "browse <name>",
+	Short:             "Open a repository's remote URL in the browser",
+	GroupID:           GroupRepo,
+	Args:              cobra.ExactArgs(1),
+	ValidArgsFunction: repoCompletion,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if jsonOutput {
 			return unsupportedJSON("browse")

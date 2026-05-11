@@ -11,10 +11,11 @@ import (
 )
 
 var stashCmd = &cobra.Command{
-	Use:     "stash [filter]",
-	Short:   "Stash changes in dirty repositories",
-	GroupID: GroupRepo,
-	Args:    cobra.MaximumNArgs(1),
+	Use:               "stash [filter]",
+	Short:             "Stash changes in dirty repositories",
+	GroupID:           GroupRepo,
+	Args:              cobra.MaximumNArgs(1),
+	ValidArgsFunction: repoCompletion,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		type result struct {
 			URL   string `json:"url"`
@@ -104,5 +105,7 @@ var stashCmd = &cobra.Command{
 func init() {
 	stashCmd.Flags().StringP("group", "g", "", "Stash only repos in this group")
 	stashCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
+	registerGroupCompletion(stashCmd)
+	registerFilterCompletion(stashCmd)
 	rootCmd.AddCommand(stashCmd)
 }

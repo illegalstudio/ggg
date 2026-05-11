@@ -43,6 +43,9 @@ func TestCLIInitAndShellInit(t *testing.T) {
 	if !strings.Contains(out, "gcd()") {
 		t.Fatalf("unexpected shell-init output:\n%s", out)
 	}
+	if !strings.Contains(out, "#compdef ggg") {
+		t.Fatalf("shell-init output missing zsh completion:\n%s", out)
+	}
 }
 
 func TestCLIAddListValidateRemove(t *testing.T) {
@@ -119,6 +122,14 @@ repos:
 	}
 	if strings.TrimSpace(out) != repoDir {
 		t.Fatalf("cd output = %q, want %q", strings.TrimSpace(out), repoDir)
+	}
+
+	out, err = runGGG(t, home, "__complete", "cd", "pro")
+	if err != nil {
+		t.Fatalf("ggg cd completion failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "project") {
+		t.Fatalf("completion output missing repo name:\n%s", out)
 	}
 }
 
@@ -219,6 +230,13 @@ repos:
 	}
 
 	testutil.RunGit(t, clonedPath, home, "branch", "feature")
+	out, err = runGGG(t, home, "__complete", "checkout", "fea")
+	if err != nil {
+		t.Fatalf("ggg checkout completion failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "feature") {
+		t.Fatalf("checkout completion output missing branch:\n%s", out)
+	}
 
 	out, err = runGGG(t, home, "checkout", "feature", "demo")
 	if err != nil {

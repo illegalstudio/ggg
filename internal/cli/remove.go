@@ -10,10 +10,11 @@ import (
 )
 
 var removeCmd = &cobra.Command{
-	Use:     "remove [name]",
-	Short:   "Remove a repository from the configuration",
-	GroupID: GroupConfig,
-	Args:    cobra.MaximumNArgs(1),
+	Use:               "remove [name]",
+	Short:             "Remove a repository from the configuration",
+	GroupID:           GroupConfig,
+	Args:              cobra.MaximumNArgs(1),
+	ValidArgsFunction: repoCompletion,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.LoadRaw()
 		if err != nil {

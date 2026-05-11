@@ -151,6 +151,25 @@ func HasBranch(repoPath, branch string) bool {
 	return cmd.Run() == nil
 }
 
+// LocalBranches returns local branch names for shell completion.
+func LocalBranches(repoPath string) ([]string, error) {
+	cmd := exec.Command("git", "for-each-ref", "--format=%(refname:short)", "refs/heads")
+	cmd.Dir = repoPath
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("git for-each-ref failed: %w", err)
+	}
+
+	var branches []string
+	for _, line := range strings.Split(string(out), "\n") {
+		branch := strings.TrimSpace(line)
+		if branch != "" {
+			branches = append(branches, branch)
+		}
+	}
+	return branches, nil
+}
+
 // DiffSummary returns the short diff stat for a dirty repo.
 func DiffSummary(repoPath string) (string, error) {
 	cmd := exec.Command("git", "diff", "--stat")

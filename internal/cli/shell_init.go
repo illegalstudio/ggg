@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -41,11 +42,36 @@ function gcd
 end
 `
 
+func generateCompletionScript(shell string) (string, error) {
+	var buf strings.Builder
+	switch shell {
+	case "bash":
+		if err := rootCmd.GenBashCompletion(&buf); err != nil {
+			return "", err
+		}
+	case "zsh":
+		if err := rootCmd.GenZshCompletion(&buf); err != nil {
+			return "", err
+		}
+	case "fish":
+		if err := rootCmd.GenFishCompletion(&buf, true); err != nil {
+			return "", err
+		}
+	default:
+		return "", fmt.Errorf("unsupported shell: %s", shell)
+	}
+	return buf.String(), nil
+}
+
 var shellInitCmd = &cobra.Command{
-	Use:     "shell-init [bash|zsh|fish]",
-	Short:   "Print shell integration script (gcd alias)",
-	GroupID: GroupConfig,
+	Use:               "shell-init [bash|zsh|fish]",
+	Short:             "Print shell integration script (gcd alias and completions)",
+	GroupID:           GroupConfig,
+	ValidArgsFunction: shellCompletion,
 	Long: `Print a shell function that defines the "gcd" alias for quick navigation.
+
+The generated script also installs Cobra-powered tab completion for ggg
+commands, repository names, group names, and local branches where applicable.
 
 Add to your shell configuration:
   bash:  eval "$(ggg shell-init bash)"   (in ~/.bashrc)
@@ -69,6 +95,12 @@ Then use "gcd <name>" to navigate to a repository.`,
 		default:
 			return fmt.Errorf("unsupported shell: %s (use bash, zsh, or fish)", shell)
 		}
+
+		completion, err := generateCompletionScript(shell)
+		if err != nil {
+			return err
+		}
+		script += "\n" + completion
 
 		if done, err := maybeJSON(map[string]any{"shell": shell, "script": script}); done {
 			return err

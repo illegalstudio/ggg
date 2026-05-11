@@ -33,10 +33,11 @@ type repoStatus struct {
 }
 
 var statusCmd = &cobra.Command{
-	Use:     "status [filter]",
-	Short:   "Show status of all configured repositories",
-	GroupID: GroupInfo,
-	Args:    cobra.MaximumNArgs(1),
+	Use:               "status [filter]",
+	Short:             "Show status of all configured repositories",
+	GroupID:           GroupInfo,
+	Args:              cobra.MaximumNArgs(1),
+	ValidArgsFunction: repoCompletion,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, repos, _, err := resolveBulkRepos(cmd, args)
 		if err != nil {
@@ -168,5 +169,7 @@ func init() {
 	statusCmd.Flags().StringP("group", "g", "", "Show only repos in this group")
 	statusCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
 	statusCmd.Flags().BoolP("detailed", "d", false, "Show linked worktrees as a tree under each repo")
+	registerGroupCompletion(statusCmd)
+	registerFilterCompletion(statusCmd)
 	rootCmd.AddCommand(statusCmd)
 }

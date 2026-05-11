@@ -40,6 +40,9 @@ ggg clone github.com/user/repo
 
 # List repositories and their status
 ggg list
+
+# Optional: enable gcd and shell completions
+eval "$(ggg shell-init zsh)"
 ```
 
 ## Commands
@@ -57,7 +60,7 @@ ggg list
 | `ggg remove [name]` | Remove a repository from the configuration |
 | `ggg open <name>` | Open a repository in your editor |
 | `ggg browse <name>` | Open a repository's remote URL in the browser |
-| `ggg cd <name>` | Shell integration — `eval $(ggg cd <name>)` |
+| `ggg cd <name>` | Print a repository path for shell navigation |
 | `ggg import [org] [repo]` | Import repositories from GitHub via `gh` CLI |
 | `ggg export [path]` | Export the configuration file to a given path |
 | `ggg stash [name]` | Stash changes in dirty repositories |
@@ -66,7 +69,7 @@ ggg list
 | `ggg doctor` | Run health checks on config and repositories |
 | `ggg outdated` | Show repositories that are behind their remote |
 | `ggg validate` | Validate config for duplicates and conflicts |
-| `ggg shell-init` | Print shell integration script (`gcd` alias) |
+| `ggg shell-init` | Print shell integration script (`gcd` alias and completions) |
 
 Most commands support `--group/-g` to filter by group. Data-producing commands support `--json` for machine-readable output; commands that launch an editor or browser report that JSON is unsupported.
 

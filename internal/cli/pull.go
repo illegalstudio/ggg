@@ -11,10 +11,11 @@ import (
 )
 
 var pullCmd = &cobra.Command{
-	Use:     "pull [filter]",
-	Short:   "Pull latest changes (all or filtered repos, only if clean)",
-	GroupID: GroupRepo,
-	Args:    cobra.MaximumNArgs(1),
+	Use:               "pull [filter]",
+	Short:             "Pull latest changes (all or filtered repos, only if clean)",
+	GroupID:           GroupRepo,
+	Args:              cobra.MaximumNArgs(1),
+	ValidArgsFunction: repoCompletion,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		type result struct {
 			URL   string `json:"url"`
@@ -107,5 +108,7 @@ var pullCmd = &cobra.Command{
 func init() {
 	pullCmd.Flags().StringP("group", "g", "", "Pull only repos in this group")
 	pullCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
+	registerGroupCompletion(pullCmd)
+	registerFilterCompletion(pullCmd)
 	rootCmd.AddCommand(pullCmd)
 }

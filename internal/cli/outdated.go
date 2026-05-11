@@ -19,10 +19,11 @@ type outdatedResult struct {
 }
 
 var outdatedCmd = &cobra.Command{
-	Use:     "outdated [filter]",
-	Short:   "Show repositories that are behind their remote",
-	GroupID: GroupInfo,
-	Args:    cobra.MaximumNArgs(1),
+	Use:               "outdated [filter]",
+	Short:             "Show repositories that are behind their remote",
+	GroupID:           GroupInfo,
+	Args:              cobra.MaximumNArgs(1),
+	ValidArgsFunction: repoCompletion,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, repos, _, err := resolveBulkRepos(cmd, args)
 		if err != nil {
@@ -106,5 +107,7 @@ var outdatedCmd = &cobra.Command{
 func init() {
 	outdatedCmd.Flags().StringP("group", "g", "", "Check only repos in this group")
 	outdatedCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
+	registerGroupCompletion(outdatedCmd)
+	registerFilterCompletion(outdatedCmd)
 	rootCmd.AddCommand(outdatedCmd)
 }

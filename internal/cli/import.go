@@ -354,5 +354,6 @@ func selectReposFromEnv(repos []ghRepo) ([]ghRepo, bool, error) {
 func init() {
 	importCmd.Flags().Bool("http", false, "Use HTTPS URLs instead of SSH")
 	importCmd.Flags().StringP("group", "g", "", "Assign imported repos to a group")
+	registerGroupCompletion(importCmd)
 	rootCmd.AddCommand(importCmd)
 }
