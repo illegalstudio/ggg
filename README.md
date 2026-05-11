@@ -1,6 +1,13 @@
 # GGG (Go Git Get)
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Follow @nahime0](https://img.shields.io/badge/Follow%20%40nahime0-black?logo=x&logoColor=white)](https://x.com/nahime0)
+
+> For updates and news, follow me on [X @nahime0](https://x.com/nahime0).
+
 Clone and manage git repositories from a YAML configuration file.
+
+GGG has a brother, [GGW](https://github.com/illegalstudio/ggw), that helps you manage your git worktrees.
 
 ## Installation
 
