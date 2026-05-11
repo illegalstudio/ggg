@@ -114,16 +114,24 @@ Show the status of all configured repositories.
 ```bash
 ggg status
 ggg status --group work
+ggg status --detailed
 ```
 
 | Flag | Short | Description |
 |------|-------|-------------|
 | `--group` | `-g` | Show only repos in this group. |
+| `--filter` | `-f` | Filter repos by name. |
+| `--detailed` | `-d` | Show linked worktrees as a tree under each repo. |
 
 For each cloned repo, displays:
 - **Branch** name
 - **Clean/dirty** working tree status
 - **Ahead/behind** remote (`↑N` / `↓N`)
+- **Worktree count** (`⎇N`) when one or more linked worktrees exist
+
+With `--detailed`, every linked worktree is rendered as a tree branch under its
+repo, showing the worktree directory name, current branch, dirty/clean state,
+and ahead/behind counters.
 
 Status checks run **in parallel** with a spinner.
 

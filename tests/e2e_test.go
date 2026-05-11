@@ -234,6 +234,83 @@ repos:
 	}
 }
 
+func TestCLIStatusWorktrees(t *testing.T) {
+	home := testutil.SetupHome(t)
+	baseDir := filepath.Join(home, "Developer")
+	if err := os.MkdirAll(baseDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	_, remote := createRemoteRepo(t, home)
+
+	writeConfig(t, home, fmt.Sprintf(`
+base_dir: %s
+repos:
+  - url: %s
+    path: team/wt-demo
+`, filepath.ToSlash(baseDir), filepath.ToSlash(remote)))
+
+	if out, err := runGGG(t, home, "clone", "wt-demo"); err != nil {
+		t.Fatalf("ggg clone failed: %v\n%s", err, out)
+	}
+
+	clonedPath := filepath.Join(baseDir, "team", "wt-demo")
+	wt1 := filepath.Join(t.TempDir(), "feature-wt")
+	wt2 := filepath.Join(t.TempDir(), "bugfix-wt")
+	testutil.RunGit(t, clonedPath, home, "worktree", "add", "-b", "feature", wt1)
+	testutil.RunGit(t, clonedPath, home, "worktree", "add", "-b", "bugfix", wt2)
+
+	// Make one of the worktrees dirty.
+	testutil.WriteFile(t, wt1, "scratch.txt", "wip\n")
+
+	// Default view: count badge appears, no per-worktree tree.
+	out, err := runGGG(t, home, "status")
+	if err != nil {
+		t.Fatalf("ggg status failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "⎇2") {
+		t.Fatalf("status output missing worktree badge ⎇2:\n%s", out)
+	}
+	if strings.Contains(out, "├─") || strings.Contains(out, "└─") {
+		t.Fatalf("status (no --detailed) should not show worktree tree:\n%s", out)
+	}
+
+	// Detailed view: tree includes both worktrees with branch + status.
+	out, err = runGGG(t, home, "status", "--detailed")
+	if err != nil {
+		t.Fatalf("ggg status --detailed failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "├─") || !strings.Contains(out, "└─") {
+		t.Fatalf("status --detailed missing tree connectors:\n%s", out)
+	}
+	if !strings.Contains(out, "[feature]") || !strings.Contains(out, "[bugfix]") {
+		t.Fatalf("status --detailed missing worktree branches:\n%s", out)
+	}
+	if !strings.Contains(out, "dirty") {
+		t.Fatalf("status --detailed missing dirty worktree status:\n%s", out)
+	}
+
+	// JSON output exposes the worktrees array.
+	out, err = runGGG(t, home, "--json", "status")
+	if err != nil {
+		t.Fatalf("ggg --json status failed: %v\n%s", err, out)
+	}
+	var payload struct {
+		Repos []struct {
+			Worktrees []struct {
+				Branch string `json:"branch"`
+				Dirty  bool   `json:"dirty"`
+			} `json:"worktrees"`
+		} `json:"repos"`
+	}
+	if err := json.Unmarshal([]byte(out), &payload); err != nil {
+		t.Fatalf("status --json invalid JSON: %v\n%s", err, out)
+	}
+	if len(payload.Repos) != 1 || len(payload.Repos[0].Worktrees) != 2 {
+		t.Fatalf("expected 1 repo with 2 worktrees in JSON, got: %+v", payload)
+	}
+}
+
 func TestCLIOutdatedAndPull(t *testing.T) {
 	home := testutil.SetupHome(t)
 	baseDir := filepath.Join(home, "Developer")
