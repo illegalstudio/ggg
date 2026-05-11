@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"go-git-get/internal/config"
-	"go-git-get/internal/repo"
-	"go-git-get/internal/ui"
+	"github.com/illegalstudio/ggg/internal/config"
+	"github.com/illegalstudio/ggg/internal/repo"
+	"github.com/illegalstudio/ggg/internal/ui"
 
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"

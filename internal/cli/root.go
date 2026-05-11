@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"go-git-get/internal/config"
+	"github.com/illegalstudio/ggg/internal/config"
 
 	"github.com/spf13/cobra"
 )

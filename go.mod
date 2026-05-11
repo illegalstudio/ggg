@@ -1,4 +1,4 @@
-module go-git-get
+module github.com/illegalstudio/ggg
 
 go 1.24.2
 

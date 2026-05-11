@@ -3,7 +3,7 @@ package cli
 import (
 	"testing"
 
-	"go-git-get/internal/config"
+	"github.com/illegalstudio/ggg/internal/config"
 )
 
 func TestFilterByGroup_Empty(t *testing.T) {

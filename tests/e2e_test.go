@@ -11,7 +11,7 @@ import (
 	"sync"
 	"testing"
 
-	"go-git-get/internal/testutil"
+	"github.com/illegalstudio/ggg/internal/testutil"
 )
 
 var (

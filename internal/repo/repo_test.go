@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"go-git-get/internal/config"
-	"go-git-get/internal/testutil"
+	"github.com/illegalstudio/ggg/internal/config"
+	"github.com/illegalstudio/ggg/internal/testutil"
 )
 
 func TestDerivePathFromURL_SSH(t *testing.T) {

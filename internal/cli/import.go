@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"go-git-get/internal/config"
-	"go-git-get/internal/ui"
+	"github.com/illegalstudio/ggg/internal/config"
+	"github.com/illegalstudio/ggg/internal/ui"
 
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/huh/spinner"

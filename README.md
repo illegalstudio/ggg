@@ -5,14 +5,14 @@ Clone and manage git repositories from a YAML configuration file.
 ## Installation
 
 ```bash
-go install github.com/illegalstudio/go-git-get/cmd/ggg@latest
+go install github.com/illegalstudio/ggg/cmd/ggg@latest
 ```
 
 Or build from source:
 
 ```bash
-git clone https://github.com/illegalstudio/go-git-get.git
-cd go-git-get
+git clone https://github.com/illegalstudio/ggg.git
+cd ggg
 go build -o ggg ./cmd/ggg
 ```
 

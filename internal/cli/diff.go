@@ -3,8 +3,8 @@ package cli
 import (
 	"fmt"
 
-	"go-git-get/internal/repo"
-	"go-git-get/internal/ui"
+	"github.com/illegalstudio/ggg/internal/repo"
+	"github.com/illegalstudio/ggg/internal/ui"
 
 	"github.com/spf13/cobra"
 )

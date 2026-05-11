@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"strings"
 
-	"go-git-get/internal/config"
-	"go-git-get/internal/ui"
+	"github.com/illegalstudio/ggg/internal/config"
+	"github.com/illegalstudio/ggg/internal/ui"
 
 	"github.com/spf13/cobra"
 )
