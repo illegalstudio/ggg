@@ -11,11 +11,19 @@ GGG has a brother, [GGW](https://github.com/illegalstudio/ggw), that helps you m
 
 ## Installation
 
+### Homebrew
+
+```bash
+brew install illegalstudio/tap/ggg
+```
+
+### Go
+
 ```bash
 go install github.com/illegalstudio/ggg/cmd/ggg@latest
 ```
 
-Or build from source:
+### From source
 
 ```bash
 git clone https://github.com/illegalstudio/ggg.git
