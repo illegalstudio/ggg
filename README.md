@@ -43,6 +43,9 @@ ggg list
 
 # Optional: enable gcd and shell completions
 eval "$(ggg shell-init zsh)"
+
+# Print the installed version
+ggg --version
 ```
 
 ## Commands

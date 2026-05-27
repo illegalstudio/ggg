@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/illegalstudio/ggg/internal/config"
+	"github.com/illegalstudio/ggg/internal/version"
 
 	"github.com/spf13/cobra"
 )
@@ -20,6 +21,7 @@ const (
 var rootCmd = &cobra.Command{
 	Use:           "ggg",
 	Short:         "Go Git Get — clone and manage git repositories from a config file",
+	Version:       version.String(),
 	SilenceErrors: true,
 	Long: `Go Git Get — clone and manage git repositories from a config file.
 
@@ -37,6 +39,7 @@ Use "ggg <command> --help" for details on any command.`,
 
 func init() {
 	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "Output in JSON format (suppresses spinners and prompts)")
+	rootCmd.SetVersionTemplate("{{.Version}}\n")
 }
 
 func Execute() {
