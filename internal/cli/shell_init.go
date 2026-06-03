@@ -7,37 +7,37 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const shellFunction = `# GGG shell integration — gcd alias
-# Add this to your .bashrc or .zshrc
-gcd() {
-  if [ -z "$1" ]; then
-    echo "Usage: gcd <name>"
-    return 1
-  fi
-  local dir
-  dir=$(ggg cd "$1" 2>&1)
-  if [ $? -eq 0 ]; then
-    cd "$dir"
+// shellFunction is the shell wrapper for bash/zsh. It intercepts `ggg cd`
+// and turns it into a real `cd`; everything else falls through to the binary.
+// Only stdout (the resolved path) is captured, so the interactive selector —
+// which huh renders to stderr/the TTY — works even for ambiguous names.
+const shellFunction = `# ggg shell integration: turn 'ggg cd' into a real chdir.
+ggg() {
+  if [ "$1" = "cd" ]; then
+    shift
+    local _ggg_dir
+    if ! _ggg_dir=$(command ggg cd "$@"); then
+      return 1
+    fi
+    builtin cd "$_ggg_dir" || return $?
   else
-    echo "$dir"
-    return 1
+    command ggg "$@"
   fi
 }
 `
 
-const fishFunction = `# GGG shell integration for fish — gcd alias
-# Add this to your ~/.config/fish/config.fish
-function gcd
-  if test -z "$argv[1]"
-    echo "Usage: gcd <name>"
-    return 1
-  end
-  set -l dir (command ggg cd $argv[1] 2>&1)
-  if test $status -eq 0
-    cd $dir
+// fishFunction is the equivalent for fish.
+const fishFunction = `# ggg shell integration: turn 'ggg cd' into a real chdir.
+function ggg
+  if test "$argv[1]" = "cd"
+    set -e argv[1]
+    set -l _ggg_dir (command ggg cd $argv)
+    if test $status -ne 0
+      return 1
+    end
+    builtin cd $_ggg_dir
   else
-    echo $dir
-    return 1
+    command ggg $argv
   end
 end
 `
@@ -65,20 +65,21 @@ func generateCompletionScript(shell string) (string, error) {
 
 var shellInitCmd = &cobra.Command{
 	Use:               "shell-init [bash|zsh|fish]",
-	Short:             "Print shell integration script (gcd alias and completions)",
+	Short:             "Print shell integration script (eval to enable `ggg cd` and completions)",
 	GroupID:           GroupConfig,
 	ValidArgsFunction: shellCompletion,
-	Long: `Print a shell function that defines the "gcd" alias for quick navigation.
+	Long: `Print a shell function that makes "ggg cd" actually change directory.
 
-The generated script also installs Cobra-powered tab completion for ggg
-commands, repository names, group names, and local branches where applicable.
+Without it, "ggg cd" can only print the path — a child process cannot change
+the parent shell's directory. The generated script also installs Cobra-powered
+tab completion for ggg commands, repository names, and group names.
 
 Add to your shell configuration:
   bash:  eval "$(ggg shell-init bash)"   (in ~/.bashrc)
   zsh:   eval "$(ggg shell-init zsh)"    (in ~/.zshrc)
   fish:  ggg shell-init fish | source    (in ~/.config/fish/config.fish)
 
-Then use "gcd <name>" to navigate to a repository.`,
+Then use "ggg cd <name>" to navigate to a repository.`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		shell := "zsh"

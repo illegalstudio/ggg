@@ -11,7 +11,7 @@ import (
 
 var cdCmd = &cobra.Command{
 	Use:               "cd <name>",
-	Short:             "Print the path of a repository (use ggg shell-init for seamless cd)",
+	Short:             "Print a repository path (chdir requires shell integration — see `ggg shell-init`)",
 	GroupID:           GroupRepo,
 	Args:              cobra.ExactArgs(1),
 	ValidArgsFunction: repoCompletion,

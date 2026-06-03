@@ -40,7 +40,7 @@ func TestCLIInitAndShellInit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ggg shell-init failed: %v\n%s", err, out)
 	}
-	if !strings.Contains(out, "gcd()") {
+	if !strings.Contains(out, "ggg()") {
 		t.Fatalf("unexpected shell-init output:\n%s", out)
 	}
 	if !strings.Contains(out, "#compdef ggg") {
