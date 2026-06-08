@@ -139,7 +139,8 @@ func TestCLIExportCopiesConfig(t *testing.T) {
 base_dir: ~/Developer
 repos:
   - url: git@github.com:acme/exported.git
-    group: work
+    groups:
+      - work
 `)
 
 	destDir := t.TempDir()
@@ -563,7 +564,7 @@ printf '%%s\n' '[{"full_name":"acme/alpha","ssh_url":"git@github.com:acme/alpha.
 	if !strings.Contains(configText, "https://github.com/acme/alpha.git") || !strings.Contains(configText, "https://github.com/acme/bravo.git") {
 		t.Fatalf("imported repos missing from config:\n%s", configText)
 	}
-	if strings.Count(configText, "group: work") != 2 {
+	if strings.Count(configText, "- work\n") != 2 {
 		t.Fatalf("imported group missing from config:\n%s", configText)
 	}
 
