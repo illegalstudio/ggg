@@ -24,7 +24,7 @@ const DefaultPullStrategy = PullMerge
 type Repo struct {
 	URL          string       `mapstructure:"url" yaml:"url"`
 	Path         string       `mapstructure:"path" yaml:"path,omitempty"`
-	Group        string       `mapstructure:"group" yaml:"group,omitempty"`
+	Groups       []string     `mapstructure:"groups" yaml:"groups,omitempty"`
 	PullStrategy PullStrategy `mapstructure:"pull_strategy" yaml:"pull_strategy,omitempty"`
 }
 
@@ -121,6 +121,7 @@ base_dir: ~/Developer
 repos:
   - url: git@github.com:user/repo.git
   # path: custom/path           # optional, derived from URL if omitted
+  # groups: [work, oss]         # optional, assign the repo to one or more groups
   # pull_strategy: rebase       # optional, overrides global strategy
 `
 	dir := filepath.Dir(path)

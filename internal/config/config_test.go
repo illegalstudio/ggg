@@ -60,7 +60,7 @@ func TestSaveAndLoadRaw(t *testing.T) {
 		Repos: []Repo{
 			{URL: "git@github.com:user/repo1.git"},
 			{URL: "git@github.com:user/repo2.git", Path: "custom/path"},
-			{URL: "git@github.com:user/repo3.git", Group: "work"},
+			{URL: "git@github.com:user/repo3.git", Groups: []string{"work"}},
 		},
 	}
 
@@ -91,8 +91,8 @@ func TestSaveAndLoadRaw(t *testing.T) {
 	if loaded.Repos[1].Path != "custom/path" {
 		t.Errorf("Repos[1].Path = %q, want %q", loaded.Repos[1].Path, "custom/path")
 	}
-	if loaded.Repos[2].Group != "work" {
-		t.Errorf("Repos[2].Group = %q, want %q", loaded.Repos[2].Group, "work")
+	if len(loaded.Repos[2].Groups) != 1 || loaded.Repos[2].Groups[0] != "work" {
+		t.Errorf("Repos[2].Groups = %v, want [work]", loaded.Repos[2].Groups)
 	}
 }
 
@@ -155,7 +155,7 @@ func TestSaveAndLoad_WithHomeConfigPath(t *testing.T) {
 		BaseDir:      "~/Dev",
 		PullStrategy: PullFFOnly,
 		Repos: []Repo{
-			{URL: "git@github.com:a/b.git", Group: "work"},
+			{URL: "git@github.com:a/b.git", Groups: []string{"work"}},
 			{URL: "https://github.com/c/d.git", Path: "custom/path", PullStrategy: PullRebase},
 		},
 	}
@@ -193,7 +193,7 @@ func TestSave_MarshalRoundtrip(t *testing.T) {
 		BaseDir: "~/Dev",
 		Repos: []Repo{
 			{URL: "git@github.com:a/b.git"},
-			{URL: "git@github.com:c/d.git", Path: "custom", Group: "personal"},
+			{URL: "git@github.com:c/d.git", Path: "custom", Groups: []string{"personal"}},
 		},
 	}
 
@@ -214,8 +214,8 @@ func TestSave_MarshalRoundtrip(t *testing.T) {
 	if loaded.Repos[0].Path != "" {
 		t.Errorf("Repos[0].Path should be empty, got %q", loaded.Repos[0].Path)
 	}
-	if loaded.Repos[1].Group != "personal" {
-		t.Errorf("Repos[1].Group = %q, want %q", loaded.Repos[1].Group, "personal")
+	if len(loaded.Repos[1].Groups) != 1 || loaded.Repos[1].Groups[0] != "personal" {
+		t.Errorf("Repos[1].Groups = %v, want [personal]", loaded.Repos[1].Groups)
 	}
 }
 
@@ -248,6 +248,32 @@ func TestResolvePullStrategy_RepoWithoutGlobal(t *testing.T) {
 	r := Repo{URL: "git@github.com:user/repo.git", PullStrategy: PullRebase}
 	if got := cfg.ResolvePullStrategy(r); got != PullRebase {
 		t.Errorf("expected %q, got %q", PullRebase, got)
+	}
+}
+
+func TestSave_MultipleGroupsRoundtrip(t *testing.T) {
+	cfg := &Config{
+		BaseDir: "~/Dev",
+		Repos: []Repo{
+			{URL: "git@github.com:a/b.git", Groups: []string{"work", "oss"}},
+		},
+	}
+
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var loaded Config
+	if err := yaml.Unmarshal(data, &loaded); err != nil {
+		t.Fatal(err)
+	}
+
+	if len(loaded.Repos[0].Groups) != 2 {
+		t.Fatalf("got %d groups, want 2", len(loaded.Repos[0].Groups))
+	}
+	if loaded.Repos[0].Groups[0] != "work" || loaded.Repos[0].Groups[1] != "oss" {
+		t.Errorf("Groups = %v, want [work oss]", loaded.Repos[0].Groups)
 	}
 }
 
