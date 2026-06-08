@@ -37,24 +37,24 @@ var listCmd = &cobra.Command{
 		repos = filterByName(repos, getFilter(cmd, args))
 
 		type listEntry struct {
-			URL    string `json:"url"`
-			Path   string `json:"path"`
-			Group  string `json:"group,omitempty"`
-			Cloned bool   `json:"cloned"`
-			Error  string `json:"error,omitempty"`
+			URL    string   `json:"url"`
+			Path   string   `json:"path"`
+			Groups []string `json:"groups,omitempty"`
+			Cloned bool     `json:"cloned"`
+			Error  string   `json:"error,omitempty"`
 		}
 
 		entries := make([]listEntry, 0, len(repos))
 		for _, r := range repos {
 			fullPath, err := repo.FullPath(cfg.BaseDir, r)
 			if err != nil {
-				entries = append(entries, listEntry{URL: r.URL, Group: r.Group, Error: err.Error()})
+				entries = append(entries, listEntry{URL: r.URL, Groups: r.Groups, Error: err.Error()})
 				continue
 			}
 			entries = append(entries, listEntry{
 				URL:    r.URL,
 				Path:   fullPath,
-				Group:  r.Group,
+				Groups: r.Groups,
 				Cloned: repo.IsCloned(fullPath),
 			})
 		}
@@ -89,8 +89,10 @@ func listGroups() error {
 
 	groups := map[string]int{}
 	for _, r := range cfg.Repos {
-		if r.Group != "" {
-			groups[r.Group]++
+		for _, g := range r.Groups {
+			if g != "" {
+				groups[g]++
+			}
 		}
 	}
 

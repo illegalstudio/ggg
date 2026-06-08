@@ -18,7 +18,7 @@ var addCmd = &cobra.Command{
 	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		url := args[0]
-		group, _ := cmd.Flags().GetString("group")
+		groups, _ := cmd.Flags().GetStringArray("group")
 		path, _ := cmd.Flags().GetString("path")
 		clone, _ := cmd.Flags().GetBool("clone")
 
@@ -33,7 +33,7 @@ var addCmd = &cobra.Command{
 			}
 		}
 
-		newRepo := config.Repo{URL: url, Group: group, Path: path}
+		newRepo := config.Repo{URL: url, Groups: groups, Path: path}
 		cfg.Repos = append(cfg.Repos, newRepo)
 
 		if err := config.Save(cfg); err != nil {
@@ -107,7 +107,7 @@ var addCmd = &cobra.Command{
 }
 
 func init() {
-	addCmd.Flags().StringP("group", "g", "", "Assign the repo to a group")
+	addCmd.Flags().StringArrayP("group", "g", nil, "Assign the repo to one or more groups (repeatable)")
 	addCmd.Flags().StringP("path", "p", "", "Custom clone path (relative to base_dir)")
 	addCmd.Flags().BoolP("clone", "c", false, "Clone the repo immediately after adding")
 	registerGroupCompletion(addCmd)

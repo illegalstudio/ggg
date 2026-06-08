@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/illegalstudio/ggg/internal/config"
@@ -8,8 +9,8 @@ import (
 
 func TestFilterByGroup_Empty(t *testing.T) {
 	repos := []config.Repo{
-		{URL: "git@github.com:user/a.git", Group: "work"},
-		{URL: "git@github.com:user/b.git", Group: "personal"},
+		{URL: "git@github.com:user/a.git", Groups: []string{"work"}},
+		{URL: "git@github.com:user/b.git", Groups: []string{"personal"}},
 		{URL: "git@github.com:user/c.git"},
 	}
 
@@ -21,9 +22,9 @@ func TestFilterByGroup_Empty(t *testing.T) {
 
 func TestFilterByGroup_Match(t *testing.T) {
 	repos := []config.Repo{
-		{URL: "git@github.com:user/a.git", Group: "work"},
-		{URL: "git@github.com:user/b.git", Group: "personal"},
-		{URL: "git@github.com:user/c.git", Group: "work"},
+		{URL: "git@github.com:user/a.git", Groups: []string{"work"}},
+		{URL: "git@github.com:user/b.git", Groups: []string{"personal"}},
+		{URL: "git@github.com:user/c.git", Groups: []string{"work"}},
 	}
 
 	result := filterByGroup(repos, "work")
@@ -40,12 +41,26 @@ func TestFilterByGroup_Match(t *testing.T) {
 
 func TestFilterByGroup_NoMatch(t *testing.T) {
 	repos := []config.Repo{
-		{URL: "git@github.com:user/a.git", Group: "work"},
+		{URL: "git@github.com:user/a.git", Groups: []string{"work"}},
 	}
 
 	result := filterByGroup(repos, "oss")
 	if len(result) != 0 {
 		t.Errorf("expected 0 repos, got %d", len(result))
+	}
+}
+
+func TestFilterByGroup_MultiGroupMembership(t *testing.T) {
+	repos := []config.Repo{
+		{URL: "git@github.com:user/a.git", Groups: []string{"work", "oss"}},
+		{URL: "git@github.com:user/b.git", Groups: []string{"personal"}},
+	}
+
+	if got := filterByGroup(repos, "oss"); len(got) != 1 || got[0].URL != "git@github.com:user/a.git" {
+		t.Errorf("filterByGroup(\"oss\") = %v, want [a.git]", got)
+	}
+	if got := filterByGroup(repos, "work"); len(got) != 1 || got[0].URL != "git@github.com:user/a.git" {
+		t.Errorf("filterByGroup(\"work\") = %v, want [a.git]", got)
 	}
 }
 
@@ -204,5 +219,22 @@ func TestHTTPURL(t *testing.T) {
 				t.Errorf("httpURL(%q) = %q, want %q", tt.in, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestRepoChoiceLabel_MultipleGroups(t *testing.T) {
+	label := repoChoiceLabel(config.Repo{
+		URL:    "git@github.com:user/a.git",
+		Groups: []string{"work", "oss"},
+	})
+	if !strings.Contains(label, "[work, oss]") {
+		t.Errorf("label = %q, want it to contain [work, oss]", label)
+	}
+}
+
+func TestRepoChoiceLabel_NoGroups(t *testing.T) {
+	label := repoChoiceLabel(config.Repo{URL: "git@github.com:user/a.git"})
+	if strings.Contains(label, "[") {
+		t.Errorf("label = %q, should not contain group brackets when there are no groups", label)
 	}
 }

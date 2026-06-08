@@ -76,7 +76,9 @@ func groupCompletion(cmd *cobra.Command, args []string, toComplete string) ([]st
 	seen := map[string]bool{}
 	var comps []string
 	for _, r := range cfg.Repos {
-		addCompletion(&comps, seen, r.Group, toComplete)
+		for _, g := range r.Groups {
+			addCompletion(&comps, seen, g, toComplete)
+		}
 	}
 	sort.Strings(comps)
 	return comps, cobra.ShellCompDirectiveNoFileComp

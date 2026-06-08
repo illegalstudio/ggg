@@ -180,8 +180,8 @@ func repoChoiceLabel(r config.Repo) string {
 	if r.Path != "" {
 		label += " (path: " + r.Path + ")"
 	}
-	if r.Group != "" {
-		label += " [" + r.Group + "]"
+	if len(r.Groups) > 0 {
+		label += " [" + strings.Join(r.Groups, ", ") + "]"
 	}
 	return label
 }

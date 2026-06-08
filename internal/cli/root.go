@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
 	"github.com/illegalstudio/ggg/internal/config"
@@ -88,7 +89,7 @@ func filterByGroup(repos []config.Repo, group string) []config.Repo {
 	}
 	var filtered []config.Repo
 	for _, r := range repos {
-		if r.Group == group {
+		if slices.Contains(r.Groups, group) {
 			filtered = append(filtered, r)
 		}
 	}

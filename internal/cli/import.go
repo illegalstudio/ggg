@@ -57,7 +57,7 @@ var importCmd = &cobra.Command{
 		}
 
 		useHTTP, _ := cmd.Flags().GetBool("http")
-		group, _ := cmd.Flags().GetString("group")
+		groups, _ := cmd.Flags().GetStringArray("group")
 
 		var repos []ghRepo
 		var fetchErr error
@@ -136,7 +136,7 @@ var importCmd = &cobra.Command{
 				continue
 			}
 
-			cfg.Repos = append(cfg.Repos, config.Repo{URL: url, Group: group})
+			cfg.Repos = append(cfg.Repos, config.Repo{URL: url, Groups: groups})
 			addedURLs = append(addedURLs, url)
 			if !jsonOutput {
 				fmt.Printf("  %s %s\n", ui.Success.Render("✓"), ui.Repo.Render(r.FullName))
@@ -353,7 +353,7 @@ func selectReposFromEnv(repos []ghRepo) ([]ghRepo, bool, error) {
 
 func init() {
 	importCmd.Flags().Bool("http", false, "Use HTTPS URLs instead of SSH")
-	importCmd.Flags().StringP("group", "g", "", "Assign imported repos to a group")
+	importCmd.Flags().StringArrayP("group", "g", nil, "Assign imported repos to one or more groups (repeatable)")
 	registerGroupCompletion(importCmd)
 	rootCmd.AddCommand(importCmd)
 }

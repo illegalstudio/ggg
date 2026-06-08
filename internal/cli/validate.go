@@ -89,10 +89,13 @@ var validateCmd = &cobra.Command{
 			}
 		}
 
-		// Check 4: empty groups (group field set to whitespace)
+		// Check 4: blank group entries (empty or whitespace-only)
 		for _, r := range cfg.Repos {
-			if r.Group != "" && strings.TrimSpace(r.Group) == "" {
-				warnings = append(warnings, fmt.Sprintf("Blank group for %s", r.URL))
+			for _, g := range r.Groups {
+				if strings.TrimSpace(g) == "" {
+					warnings = append(warnings, fmt.Sprintf("Blank group for %s", r.URL))
+					break
+				}
 			}
 		}
 
