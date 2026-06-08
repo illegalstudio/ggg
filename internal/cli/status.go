@@ -166,7 +166,7 @@ func renderWorktreeTree(wts []worktreeStat) {
 }
 
 func init() {
-	statusCmd.Flags().StringP("group", "g", "", "Show only repos in this group")
+	statusCmd.Flags().StringArrayP("group", "g", nil, "Show only repos in this group")
 	statusCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
 	statusCmd.Flags().BoolP("detailed", "d", false, "Show linked worktrees as a tree under each repo")
 	registerGroupCompletion(statusCmd)

@@ -103,7 +103,7 @@ var stashCmd = &cobra.Command{
 }
 
 func init() {
-	stashCmd.Flags().StringP("group", "g", "", "Stash only repos in this group")
+	stashCmd.Flags().StringArrayP("group", "g", nil, "Stash only repos in this group")
 	stashCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
 	registerGroupCompletion(stashCmd)
 	registerFilterCompletion(stashCmd)

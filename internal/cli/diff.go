@@ -86,7 +86,7 @@ var diffCmd = &cobra.Command{
 }
 
 func init() {
-	diffCmd.Flags().StringP("group", "g", "", "Show diff only for repos in this group")
+	diffCmd.Flags().StringArrayP("group", "g", nil, "Show diff only for repos in this group")
 	diffCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
 	registerGroupCompletion(diffCmd)
 	registerFilterCompletion(diffCmd)

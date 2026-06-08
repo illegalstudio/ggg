@@ -16,20 +16,44 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// loadRepos loads the config, applies --group filter, and returns the config
-// with the filtered repos. Returns an error message if no repos match.
+// groupFilter returns the single --group filter value. The filter accepts at
+// most one group (a repo matches when that group is among its groups); passing
+// --group more than once is an error rather than silently keeping the last one.
+func groupFilter(cmd *cobra.Command) (string, error) {
+	groups, _ := cmd.Flags().GetStringArray("group")
+	switch len(groups) {
+	case 0:
+		return "", nil
+	case 1:
+		return groups[0], nil
+	default:
+		return "", fmt.Errorf("the --group filter accepts a single group, but %d were given", len(groups))
+	}
+}
+
+// loadRepos loads the config, applies the --group filter, and returns the
+// config with the filtered repos. If nothing matches it prints an informational
+// message (distinguishing an empty config from an unmatched group) and returns
+// an empty slice.
 func loadRepos(cmd *cobra.Command) (*config.Config, []config.Repo, error) {
 	cfg, err := config.Load()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	group, _ := cmd.Flags().GetString("group")
+	group, err := groupFilter(cmd)
+	if err != nil {
+		return nil, nil, err
+	}
 	repos := filterByGroup(cfg.Repos, group)
 
 	if len(repos) == 0 {
 		if !jsonOutput {
-			fmt.Println(ui.Info.Render("No repositories configured."))
+			if group != "" && len(cfg.Repos) > 0 {
+				fmt.Println(ui.Info.Render(fmt.Sprintf("No repositories in group %q.", group)))
+			} else {
+				fmt.Println(ui.Info.Render("No repositories configured."))
+			}
 		}
 		return cfg, nil, nil
 	}

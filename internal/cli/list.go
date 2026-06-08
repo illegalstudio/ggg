@@ -144,7 +144,7 @@ func listGroups() error {
 }
 
 func init() {
-	listCmd.Flags().StringP("group", "g", "", "List only repos in this group")
+	listCmd.Flags().StringArrayP("group", "g", nil, "List only repos in this group")
 	listCmd.Flags().Bool("groups", false, "Show available groups")
 	listCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
 	registerGroupCompletion(listCmd)

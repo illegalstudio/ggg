@@ -105,7 +105,7 @@ var outdatedCmd = &cobra.Command{
 }
 
 func init() {
-	outdatedCmd.Flags().StringP("group", "g", "", "Check only repos in this group")
+	outdatedCmd.Flags().StringArrayP("group", "g", nil, "Check only repos in this group")
 	outdatedCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
 	registerGroupCompletion(outdatedCmd)
 	registerFilterCompletion(outdatedCmd)

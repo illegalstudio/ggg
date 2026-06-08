@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/illegalstudio/ggg/internal/config"
+
+	"github.com/spf13/cobra"
 )
 
 func TestFilterByGroup_Empty(t *testing.T) {
@@ -264,5 +266,48 @@ func TestCountGroups(t *testing.T) {
 	}
 	if _, ok := got["  "]; ok {
 		t.Errorf("whitespace-only group should not be counted: %v", got)
+	}
+}
+
+func newGroupFilterCmd() *cobra.Command {
+	cmd := &cobra.Command{}
+	cmd.Flags().StringArrayP("group", "g", nil, "")
+	return cmd
+}
+
+func TestGroupFilter_None(t *testing.T) {
+	got, err := groupFilter(newGroupFilterCmd())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "" {
+		t.Errorf("groupFilter with no flag = %q, want empty", got)
+	}
+}
+
+func TestGroupFilter_Single(t *testing.T) {
+	cmd := newGroupFilterCmd()
+	if err := cmd.Flags().Set("group", "work"); err != nil {
+		t.Fatal(err)
+	}
+	got, err := groupFilter(cmd)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "work" {
+		t.Errorf("groupFilter = %q, want work", got)
+	}
+}
+
+func TestGroupFilter_MultipleIsError(t *testing.T) {
+	cmd := newGroupFilterCmd()
+	if err := cmd.Flags().Set("group", "work"); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.Flags().Set("group", "oss"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := groupFilter(cmd); err == nil {
+		t.Error("expected an error when --group is given more than once")
 	}
 }

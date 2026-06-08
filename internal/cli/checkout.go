@@ -108,7 +108,7 @@ var checkoutCmd = &cobra.Command{
 }
 
 func init() {
-	checkoutCmd.Flags().StringP("group", "g", "", "Checkout only in repos in this group")
+	checkoutCmd.Flags().StringArrayP("group", "g", nil, "Checkout only in repos in this group")
 	checkoutCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
 	registerGroupCompletion(checkoutCmd)
 	registerFilterCompletion(checkoutCmd)

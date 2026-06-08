@@ -114,7 +114,7 @@ var cloneCmd = &cobra.Command{
 }
 
 func init() {
-	cloneCmd.Flags().StringP("group", "g", "", "Clone only repos in this group")
+	cloneCmd.Flags().StringArrayP("group", "g", nil, "Clone only repos in this group")
 	cloneCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
 	registerGroupCompletion(cloneCmd)
 	registerFilterCompletion(cloneCmd)

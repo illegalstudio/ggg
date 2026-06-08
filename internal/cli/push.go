@@ -117,7 +117,7 @@ var pushCmd = &cobra.Command{
 }
 
 func init() {
-	pushCmd.Flags().StringP("group", "g", "", "Push only repos in this group")
+	pushCmd.Flags().StringArrayP("group", "g", nil, "Push only repos in this group")
 	pushCmd.Flags().StringP("filter", "f", "", "Filter repos by name")
 	registerGroupCompletion(pushCmd)
 	registerFilterCompletion(pushCmd)

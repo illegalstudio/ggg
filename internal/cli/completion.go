@@ -34,7 +34,7 @@ func configuredRepoCompletions(cmd *cobra.Command, toComplete string) ([]string,
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
-	group, _ := cmd.Flags().GetString("group")
+	group, _ := groupFilter(cmd)
 	repos := filterByGroup(cfg.Repos, group)
 	return repoCompletionItems(repos, toComplete), cobra.ShellCompDirectiveNoFileComp
 }
@@ -90,7 +90,7 @@ func branchCompletion(cmd *cobra.Command, toComplete string) ([]string, cobra.Sh
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
 
-	group, _ := cmd.Flags().GetString("group")
+	group, _ := groupFilter(cmd)
 	repos := filterByGroup(cfg.Repos, group)
 	seen := map[string]bool{}
 	var comps []string
