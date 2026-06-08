@@ -238,3 +238,31 @@ func TestRepoChoiceLabel_NoGroups(t *testing.T) {
 		t.Errorf("label = %q, should not contain group brackets when there are no groups", label)
 	}
 }
+
+func TestCountGroups(t *testing.T) {
+	repos := []config.Repo{
+		{URL: "git@github.com:user/a.git", Groups: []string{"work", "oss"}},
+		{URL: "git@github.com:user/b.git", Groups: []string{"work"}},
+		{URL: "git@github.com:user/c.git"},                                 // no groups
+		{URL: "git@github.com:user/d.git", Groups: []string{"dup", "dup"}}, // duplicate within one repo
+		{URL: "git@github.com:user/e.git", Groups: []string{"  ", ""}},     // blank entries only
+	}
+
+	got := countGroups(repos)
+
+	want := map[string]int{"work": 2, "oss": 1, "dup": 1}
+	if len(got) != len(want) {
+		t.Fatalf("countGroups returned %d groups, want %d: %v", len(got), len(want), got)
+	}
+	for name, count := range want {
+		if got[name] != count {
+			t.Errorf("count[%q] = %d, want %d", name, got[name], count)
+		}
+	}
+	if _, ok := got[""]; ok {
+		t.Errorf("empty group should not be counted: %v", got)
+	}
+	if _, ok := got["  "]; ok {
+		t.Errorf("whitespace-only group should not be counted: %v", got)
+	}
+}

@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/illegalstudio/ggg/internal/config"
 	"github.com/illegalstudio/ggg/internal/repo"
@@ -81,20 +82,33 @@ var listCmd = &cobra.Command{
 	},
 }
 
+// countGroups counts how many repos belong to each group. A group is counted
+// at most once per repo (duplicate entries within a repo don't inflate the
+// count), and blank entries (empty or whitespace-only) are skipped. Group
+// names are kept verbatim so they stay consistent with the filter and
+// completion, which match exactly.
+func countGroups(repos []config.Repo) map[string]int {
+	counts := map[string]int{}
+	for _, r := range repos {
+		seen := map[string]bool{}
+		for _, g := range r.Groups {
+			if strings.TrimSpace(g) == "" || seen[g] {
+				continue
+			}
+			seen[g] = true
+			counts[g]++
+		}
+	}
+	return counts
+}
+
 func listGroups() error {
 	cfg, err := config.Load()
 	if err != nil {
 		return err
 	}
 
-	groups := map[string]int{}
-	for _, r := range cfg.Repos {
-		for _, g := range r.Groups {
-			if g != "" {
-				groups[g]++
-			}
-		}
-	}
+	groups := countGroups(cfg.Repos)
 
 	names := make([]string, 0, len(groups))
 	for g := range groups {
