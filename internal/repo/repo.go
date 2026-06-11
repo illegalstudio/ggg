@@ -36,6 +36,34 @@ func DerivePathFromURL(rawURL string) (string, error) {
 	return path, nil
 }
 
+// ApplyOwnerAlias replaces the first segment (the owner) of a derived relative
+// path when it matches an alias key. Returns relPath unchanged when there is no
+// match, the map is empty/nil, or the path has no owner segment.
+func ApplyOwnerAlias(relPath string, aliases map[string]string) string {
+	if len(aliases) == 0 || relPath == "" {
+		return relPath
+	}
+	owner, rest, hasRest := strings.Cut(relPath, "/")
+	if !hasRest {
+		return relPath
+	}
+	alias, ok := aliases[owner]
+	if !ok {
+		return relPath
+	}
+	return alias + "/" + rest
+}
+
+// DerivedPath returns the repo's path derived from its URL, with owner aliases
+// applied. It ignores any explicit Path set on the repo.
+func DerivedPath(r config.Repo, aliases map[string]string) (string, error) {
+	derived, err := DerivePathFromURL(r.URL)
+	if err != nil {
+		return "", err
+	}
+	return ApplyOwnerAlias(derived, aliases), nil
+}
+
 // FullPath returns the absolute path where a repo should be cloned.
 func FullPath(baseDir string, r config.Repo) (string, error) {
 	if r.Path != "" {
