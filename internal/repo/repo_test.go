@@ -281,3 +281,11 @@ func TestDerivedPath_NoAlias(t *testing.T) {
 		t.Errorf("DerivedPath = %q, want %q", got, "org/project")
 	}
 }
+
+func TestDerivedPath_Error(t *testing.T) {
+	r := config.Repo{URL: "http://a b.com/x"} // space makes url.Parse fail
+	_, err := DerivedPath(r, map[string]string{"a": "b"})
+	if err == nil {
+		t.Fatal("DerivedPath should return an error for an unparseable URL")
+	}
+}
