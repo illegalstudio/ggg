@@ -52,7 +52,7 @@ var addCmd = &cobra.Command{
 				return err
 			}
 
-			fullPath, err := repo.FullPath(cfgFull.BaseDir, newRepo)
+			fullPath, err := repo.FullPath(cfgFull.BaseDir, cfgFull.Aliases, newRepo)
 			if err != nil {
 				return err
 			}

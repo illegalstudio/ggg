@@ -96,7 +96,7 @@ func branchCompletion(cmd *cobra.Command, toComplete string) ([]string, cobra.Sh
 	var comps []string
 
 	for _, r := range repos {
-		fullPath, err := repo.FullPath(cfg.BaseDir, r)
+		fullPath, err := repo.FullPath(cfg.BaseDir, cfg.Aliases, r)
 		if err != nil || !repo.IsCloned(fullPath) {
 			continue
 		}

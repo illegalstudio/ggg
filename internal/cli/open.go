@@ -42,7 +42,7 @@ Examples:
 			return err
 		}
 
-		fullPath, err := repo.FullPath(cfg.BaseDir, r)
+		fullPath, err := repo.FullPath(cfg.BaseDir, cfg.Aliases, r)
 		if err != nil {
 			return err
 		}

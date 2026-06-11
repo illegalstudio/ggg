@@ -43,7 +43,7 @@ var pushCmd = &cobra.Command{
 		var jobs []pushJob
 
 		for _, r := range repos {
-			fullPath, err := repo.FullPath(cfg.BaseDir, r)
+			fullPath, err := repo.FullPath(cfg.BaseDir, cfg.Aliases, r)
 			if err != nil {
 				continue
 			}

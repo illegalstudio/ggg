@@ -65,15 +65,15 @@ func DerivedPath(r config.Repo, aliases map[string]string) (string, error) {
 }
 
 // FullPath returns the absolute path where a repo should be cloned.
-func FullPath(baseDir string, r config.Repo) (string, error) {
+func FullPath(baseDir string, aliases map[string]string, r config.Repo) (string, error) {
 	if r.Path != "" {
 		return filepath.Join(baseDir, r.Path), nil
 	}
-	derived, err := DerivePathFromURL(r.URL)
+	rel, err := DerivedPath(r, aliases)
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(baseDir, derived), nil
+	return filepath.Join(baseDir, rel), nil
 }
 
 // IsCloned checks if the repo directory already exists.

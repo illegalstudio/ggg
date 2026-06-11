@@ -55,7 +55,7 @@ func TestDerivePathFromURL_HTTPS(t *testing.T) {
 
 func TestFullPath_WithCustomPath(t *testing.T) {
 	r := config.Repo{URL: "git@github.com:user/repo.git", Path: "custom/path"}
-	got, err := FullPath("/base", r)
+	got, err := FullPath("/base", nil, r)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +67,7 @@ func TestFullPath_WithCustomPath(t *testing.T) {
 
 func TestFullPath_DerivedFromURL(t *testing.T) {
 	r := config.Repo{URL: "git@github.com:user/repo.git"}
-	got, err := FullPath("/base", r)
+	got, err := FullPath("/base", nil, r)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,11 +79,37 @@ func TestFullPath_DerivedFromURL(t *testing.T) {
 
 func TestFullPath_HTTPSUrl(t *testing.T) {
 	r := config.Repo{URL: "https://github.com/org/project.git"}
-	got, err := FullPath("/home/dev", r)
+	got, err := FullPath("/home/dev", nil, r)
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := filepath.Join("/home/dev", "org/project")
+	if got != want {
+		t.Errorf("FullPath = %q, want %q", got, want)
+	}
+}
+
+func TestFullPath_WithAlias(t *testing.T) {
+	r := config.Repo{URL: "git@github.com:nahime0/repo.git"}
+	aliases := map[string]string{"nahime0": "nahime"}
+	got, err := FullPath("/base", aliases, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join("/base", "nahime/repo")
+	if got != want {
+		t.Errorf("FullPath = %q, want %q", got, want)
+	}
+}
+
+func TestFullPath_ExplicitPathIgnoresAlias(t *testing.T) {
+	r := config.Repo{URL: "git@github.com:nahime0/repo.git", Path: "custom/path"}
+	aliases := map[string]string{"nahime0": "nahime"}
+	got, err := FullPath("/base", aliases, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join("/base", "custom/path")
 	if got != want {
 		t.Errorf("FullPath = %q, want %q", got, want)
 	}
