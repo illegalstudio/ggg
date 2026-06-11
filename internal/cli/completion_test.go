@@ -13,7 +13,7 @@ func TestRepoCompletionItemsIncludesPathsAndBasenames(t *testing.T) {
 		{URL: "git@github.com:acme/service.git", Path: "team/service-api"},
 	}
 
-	got := repoCompletionItems(repos, "")
+	got := repoCompletionItems(repos, "", nil)
 	want := []string{"acme/project", "project", "service-api", "team/service-api"}
 
 	if !reflect.DeepEqual(got, want) {
@@ -27,7 +27,7 @@ func TestRepoCompletionItemsFiltersByPrefix(t *testing.T) {
 		{URL: "git@github.com:acme/service.git", Path: "team/service-api"},
 	}
 
-	got := repoCompletionItems(repos, "ser")
+	got := repoCompletionItems(repos, "ser", nil)
 	want := []string{"service-api"}
 
 	if !reflect.DeepEqual(got, want) {
