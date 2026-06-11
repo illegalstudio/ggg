@@ -64,7 +64,9 @@ func DerivedPath(r config.Repo, aliases map[string]string) (string, error) {
 	return ApplyOwnerAlias(derived, aliases), nil
 }
 
-// FullPath returns the absolute path where a repo should be cloned.
+// FullPath returns the absolute path where a repo should be cloned. If r.Path
+// is set it is joined with baseDir directly and owner aliases are not applied;
+// otherwise the path is derived from the URL and owner aliases are applied.
 func FullPath(baseDir string, aliases map[string]string, r config.Repo) (string, error) {
 	if r.Path != "" {
 		return filepath.Join(baseDir, r.Path), nil
