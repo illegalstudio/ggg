@@ -72,7 +72,7 @@ func TestResolveOneRepo_ExactMatch_URL(t *testing.T) {
 		{URL: "git@github.com:user/beta.git"},
 	}
 
-	result, err := resolveOneRepo(repos, "git@github.com:user/beta.git")
+	result, err := resolveOneRepo(repos, "git@github.com:user/beta.git", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +87,7 @@ func TestResolveOneRepo_ExactMatch_Path(t *testing.T) {
 		{URL: "git@github.com:user/beta.git"},
 	}
 
-	result, err := resolveOneRepo(repos, "my/alpha")
+	result, err := resolveOneRepo(repos, "my/alpha", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func TestResolveOneRepo_ExactMatch_Derived(t *testing.T) {
 		{URL: "git@github.com:user/myrepo.git"},
 	}
 
-	result, err := resolveOneRepo(repos, "user/myrepo")
+	result, err := resolveOneRepo(repos, "user/myrepo", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,7 +116,7 @@ func TestResolveOneRepo_PartialMatch(t *testing.T) {
 		{URL: "git@github.com:user/other.git"},
 	}
 
-	result, err := resolveOneRepo(repos, "eleph")
+	result, err := resolveOneRepo(repos, "eleph", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,7 +131,7 @@ func TestResolveOneRepo_PartialMatch_CaseInsensitive(t *testing.T) {
 		{URL: "git@github.com:user/other.git"},
 	}
 
-	result, err := resolveOneRepo(repos, "myproject")
+	result, err := resolveOneRepo(repos, "myproject", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,7 +145,7 @@ func TestResolveOneRepo_NotFound(t *testing.T) {
 		{URL: "git@github.com:user/alpha.git"},
 	}
 
-	_, err := resolveOneRepo(repos, "nonexistent")
+	_, err := resolveOneRepo(repos, "nonexistent", nil)
 	if err == nil {
 		t.Error("expected error for nonexistent repo")
 	}
@@ -157,7 +157,7 @@ func TestResolveOneRepoIndex_ExactMatch(t *testing.T) {
 		{URL: "git@github.com:user/beta.git"},
 	}
 
-	idx, err := resolveOneRepoIndex(repos, "git@github.com:user/beta.git")
+	idx, err := resolveOneRepoIndex(repos, "git@github.com:user/beta.git", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +172,7 @@ func TestResolveOneRepoIndex_PartialMatch(t *testing.T) {
 		{URL: "git@github.com:user/beta.git"},
 	}
 
-	idx, err := resolveOneRepoIndex(repos, "beta")
+	idx, err := resolveOneRepoIndex(repos, "beta", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,7 +186,7 @@ func TestResolveOneRepoIndex_NotFound(t *testing.T) {
 		{URL: "git@github.com:user/alpha.git"},
 	}
 
-	_, err := resolveOneRepoIndex(repos, "zzz")
+	_, err := resolveOneRepoIndex(repos, "zzz", nil)
 	if err == nil {
 		t.Error("expected error for nonexistent repo")
 	}

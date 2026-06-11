@@ -31,7 +31,7 @@ var checkoutCmd = &cobra.Command{
 		}
 
 		filter := getFilter(cmd, args[1:])
-		repos = filterByName(repos, filter)
+		repos = filterByName(repos, filter, cfg.Aliases)
 
 		type checkoutJob struct {
 			repo     config.Repo

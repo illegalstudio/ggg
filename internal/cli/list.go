@@ -35,7 +35,7 @@ var listCmd = &cobra.Command{
 			return nil
 		}
 
-		repos = filterByName(repos, getFilter(cmd, args))
+		repos = filterByName(repos, getFilter(cmd, args), cfg.Aliases)
 
 		type listEntry struct {
 			URL    string   `json:"url"`
