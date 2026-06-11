@@ -92,6 +92,7 @@ Full documentation is available in the [`docs/`](docs/) directory:
 - [Commands](docs/commands.md)
 - [Groups](docs/groups.md)
 - [Shell Integration](docs/shell-integration.md)
+- Owner aliases let you map a repo owner (e.g. `nahime0`) to a folder name (`nahime`); see the [Configuration Reference](docs/configuration.md#owner-aliases).
 
 ## License
 

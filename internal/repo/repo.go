@@ -12,8 +12,8 @@ import (
 )
 
 // DerivePathFromURL extracts a filesystem path from a git URL.
-// e.g. "git@github.com:user/repo.git" -> "github.com/user/repo"
-// e.g. "https://github.com/user/repo.git" -> "github.com/user/repo"
+// e.g. "git@github.com:user/repo.git" -> "user/repo"
+// e.g. "https://github.com/user/repo.git" -> "user/repo"
 func DerivePathFromURL(rawURL string) (string, error) {
 	// Handle SSH-style URLs (git@host:user/repo.git)
 	if strings.Contains(rawURL, "@") && strings.Contains(rawURL, ":") && !strings.Contains(rawURL, "://") {
