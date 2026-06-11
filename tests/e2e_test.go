@@ -679,6 +679,49 @@ printf '%%s\n' '[{"full_name":"acme/alpha","ssh_url":"git@github.com:acme/alpha.
 	}
 }
 
+func TestCLIOwnerAlias(t *testing.T) {
+	home := testutil.SetupHome(t)
+	baseDir := filepath.Join(home, "Developer")
+	if err := os.MkdirAll(baseDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	writeConfig(t, home, fmt.Sprintf(`
+base_dir: %s
+aliases:
+  nahime0: nahime
+repos:
+  - url: git@github.com:nahime0/repo.git
+`, filepath.ToSlash(baseDir)))
+
+	// list should show the alias-applied path, not the raw owner.
+	out, err := runGGG(t, home, "list")
+	if err != nil {
+		t.Fatalf("ggg list failed: %v\n%s", err, out)
+	}
+	aliased := filepath.Join(baseDir, "nahime", "repo")
+	if !strings.Contains(out, aliased) {
+		t.Fatalf("list output missing aliased path %q:\n%s", aliased, out)
+	}
+	if strings.Contains(out, filepath.Join(baseDir, "nahime0", "repo")) {
+		t.Fatalf("list output still shows un-aliased path:\n%s", out)
+	}
+
+	// cd requires the repo directory to exist on disk.
+	if err := os.MkdirAll(aliased, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// cd should resolve the repo and print the alias-applied path.
+	out, err = runGGG(t, home, "cd", "repo")
+	if err != nil {
+		t.Fatalf("ggg cd failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, aliased) {
+		t.Fatalf("cd output missing aliased path %q:\n%s", aliased, out)
+	}
+}
+
 func runGGG(t *testing.T, home string, args ...string) (string, error) {
 	t.Helper()
 
