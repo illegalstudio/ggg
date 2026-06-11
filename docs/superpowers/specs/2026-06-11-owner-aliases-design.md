@@ -2,8 +2,9 @@
 
 ## Problem
 
-Repositories are cloned to a path derived from their git URL:
-`git@github.com:nahime0/repo.git` → `~/Developer/github.com/nahime0/repo`.
+Repositories are cloned to a path derived from their git URL. The derived
+path is `owner/repo` (the host is **not** part of it):
+`git@github.com:nahime0/repo.git` → `nahime0/repo` → `~/Developer/nahime0/repo`.
 
 A user whose GitHub username is `nahime0` wants those repos kept under a
 `nahime` folder instead, without writing a custom `path:` for every single
@@ -16,10 +17,13 @@ derived path, applied transparently wherever a repo path is derived.
 
 ## Decisions
 
-- **Scope of replacement:** owner-only. Host and the rest of the path are
-  preserved. `github.com/nahime0/repo` → `github.com/nahime/repo`.
-- **Matching:** owner name, host-independent. `nahime0` matches on any host
-  (github.com, gitlab.com, …).
+- **Scope of replacement:** owner-only — the first segment (`[0]`) of the
+  derived path. The rest of the path is preserved.
+  `nahime0/repo` → `nahime/repo`. The derived path has no host segment, so
+  there is nothing host-related to preserve.
+- **Matching:** owner name, host-independent. The URL's host does not appear in
+  the derived path, so `nahime0` is matched regardless of which host the repo
+  came from.
 - **Explicit `path:` wins:** a repo with an explicit `path:` bypasses alias
   resolution entirely (the existing `FullPath` short-circuit is unchanged).
 - **Import stays implicit:** `import` keeps saving only the `url` (no `path:`).
@@ -40,7 +44,7 @@ base_dir: ~/Developer
 aliases:
   nahime0: nahime
 repos:
-  - url: git@github.com:nahime0/ggg.git   # -> ~/Developer/github.com/nahime/ggg
+  - url: git@github.com:nahime0/ggg.git   # -> ~/Developer/nahime/ggg
 ```
 
 Added to `config.Config` as:
@@ -54,17 +58,17 @@ Aliases map[string]string `mapstructure:"aliases" yaml:"aliases,omitempty"`
 A pure, independently testable helper:
 
 ```go
-// ApplyOwnerAlias replaces segment [1] (the owner, immediately after the host)
-// of a derived relative path when it matches an alias key. Host-independent.
-// Returns relPath unchanged when there is no match, the map is empty/nil, or
-// the path has no owner segment.
+// ApplyOwnerAlias replaces the first segment (the owner) of a derived relative
+// path when it matches an alias key. Returns relPath unchanged when there is no
+// match, the map is empty/nil, or the path has no owner segment.
 func ApplyOwnerAlias(relPath string, aliases map[string]string) string
 ```
 
 Examples:
-- `ApplyOwnerAlias("github.com/nahime0/repo", {"nahime0":"nahime"})` → `github.com/nahime/repo`
-- `ApplyOwnerAlias("github.com/other/repo", {"nahime0":"nahime"})` → unchanged
-- `ApplyOwnerAlias("github.com/nahime0/repo", nil)` → unchanged
+- `ApplyOwnerAlias("nahime0/repo", {"nahime0":"nahime"})` → `nahime/repo`
+- `ApplyOwnerAlias("grp/sub/repo", {"grp":"work"})` → `work/sub/repo`
+- `ApplyOwnerAlias("other/repo", {"nahime0":"nahime"})` → unchanged
+- `ApplyOwnerAlias("nahime0/repo", nil)` → unchanged
 
 ## Wiring (approach A — thread the alias map through `repo`)
 
