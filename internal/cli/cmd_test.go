@@ -151,6 +151,29 @@ func TestResolveOneRepo_NotFound(t *testing.T) {
 	}
 }
 
+func TestResolveOneRepo_Alias(t *testing.T) {
+	repos := []config.Repo{
+		{URL: "git@github.com:nahime0/repo.git"},
+	}
+	aliases := map[string]string{"nahime0": "nahime"}
+
+	// With nil aliases, "nahime/repo" is not a substring of the URL or derived path,
+	// so the query must not match.
+	_, err := resolveOneRepo(repos, "nahime/repo", nil)
+	if err == nil {
+		t.Error("expected not-found error when aliases is nil, but got a match")
+	}
+
+	// With the alias map, the derived path becomes "nahime/repo" and should match exactly.
+	result, err := resolveOneRepo(repos, "nahime/repo", aliases)
+	if err != nil {
+		t.Fatalf("expected repo to be found via alias, got error: %v", err)
+	}
+	if result.URL != "git@github.com:nahime0/repo.git" {
+		t.Errorf("got URL %q, want %q", result.URL, "git@github.com:nahime0/repo.git")
+	}
+}
+
 func TestResolveOneRepoIndex_ExactMatch(t *testing.T) {
 	repos := []config.Repo{
 		{URL: "git@github.com:user/alpha.git"},
