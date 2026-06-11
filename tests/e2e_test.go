@@ -717,8 +717,11 @@ repos:
 	if err != nil {
 		t.Fatalf("ggg cd failed: %v\n%s", err, out)
 	}
-	if !strings.Contains(out, aliased) {
-		t.Fatalf("cd output missing aliased path %q:\n%s", aliased, out)
+	if got := strings.TrimSpace(out); got != aliased {
+		t.Fatalf("cd output = %q, want %q", got, aliased)
+	}
+	if strings.Contains(out, filepath.Join(baseDir, "nahime0", "repo")) {
+		t.Fatalf("cd output still shows un-aliased path:\n%s", out)
 	}
 }
 
