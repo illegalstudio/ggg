@@ -35,7 +35,7 @@ var listCmd = &cobra.Command{
 			return nil
 		}
 
-		repos = filterByName(repos, getFilter(cmd, args))
+		repos = filterByName(repos, getFilter(cmd, args), cfg.Aliases)
 
 		type listEntry struct {
 			URL    string   `json:"url"`
@@ -47,7 +47,7 @@ var listCmd = &cobra.Command{
 
 		entries := make([]listEntry, 0, len(repos))
 		for _, r := range repos {
-			fullPath, err := repo.FullPath(cfg.BaseDir, r)
+			fullPath, err := repo.FullPath(cfg.BaseDir, cfg.Aliases, r)
 			if err != nil {
 				entries = append(entries, listEntry{URL: r.URL, Groups: r.Groups, Error: err.Error()})
 				continue

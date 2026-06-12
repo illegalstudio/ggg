@@ -53,7 +53,7 @@ var statusCmd = &cobra.Command{
 		statuses, err := runParallelWithSpinner(repos, "Fetching status...", func(r config.Repo) repoStatus {
 			s := repoStatus{URL: r.URL}
 
-			fullPath, err := repo.FullPath(cfg.BaseDir, r)
+			fullPath, err := repo.FullPath(cfg.BaseDir, cfg.Aliases, r)
 			if err != nil {
 				s.PathErr = true
 				s.Error = err.Error()

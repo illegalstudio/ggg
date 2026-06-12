@@ -99,7 +99,7 @@ var doctorCmd = &cobra.Command{
 		// Check 6: clone status
 		cloned, notCloned := 0, 0
 		for _, r := range cfg.Repos {
-			fullPath, err := repo.FullPath(cfg.BaseDir, r)
+			fullPath, err := repo.FullPath(cfg.BaseDir, cfg.Aliases, r)
 			if err != nil {
 				continue
 			}

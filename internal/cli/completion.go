@@ -36,17 +36,17 @@ func configuredRepoCompletions(cmd *cobra.Command, toComplete string) ([]string,
 
 	group, _ := groupFilter(cmd)
 	repos := filterByGroup(cfg.Repos, group)
-	return repoCompletionItems(repos, toComplete), cobra.ShellCompDirectiveNoFileComp
+	return repoCompletionItems(repos, toComplete, cfg.Aliases), cobra.ShellCompDirectiveNoFileComp
 }
 
-func repoCompletionItems(repos []config.Repo, toComplete string) []string {
+func repoCompletionItems(repos []config.Repo, toComplete string, aliases map[string]string) []string {
 	seen := map[string]bool{}
 	var comps []string
 
 	for _, r := range repos {
 		repoPath := r.Path
 		if repoPath == "" {
-			derived, err := repo.DerivePathFromURL(r.URL)
+			derived, err := repo.DerivedPath(r, aliases)
 			if err != nil {
 				continue
 			}
@@ -96,7 +96,7 @@ func branchCompletion(cmd *cobra.Command, toComplete string) ([]string, cobra.Sh
 	var comps []string
 
 	for _, r := range repos {
-		fullPath, err := repo.FullPath(cfg.BaseDir, r)
+		fullPath, err := repo.FullPath(cfg.BaseDir, cfg.Aliases, r)
 		if err != nil || !repo.IsCloned(fullPath) {
 			continue
 		}

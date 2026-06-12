@@ -29,7 +29,7 @@ var browseCmd = &cobra.Command{
 			return err
 		}
 
-		r, err := resolveOneRepo(cfg.Repos, args[0])
+		r, err := resolveOneRepo(cfg.Repos, args[0], cfg.Aliases)
 		if err != nil {
 			return err
 		}

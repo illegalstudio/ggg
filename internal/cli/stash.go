@@ -41,7 +41,7 @@ var stashCmd = &cobra.Command{
 		var jobs []stashJob
 
 		for _, r := range repos {
-			fullPath, err := repo.FullPath(cfg.BaseDir, r)
+			fullPath, err := repo.FullPath(cfg.BaseDir, cfg.Aliases, r)
 			if err != nil {
 				continue
 			}

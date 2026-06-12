@@ -55,7 +55,7 @@ func TestDerivePathFromURL_HTTPS(t *testing.T) {
 
 func TestFullPath_WithCustomPath(t *testing.T) {
 	r := config.Repo{URL: "git@github.com:user/repo.git", Path: "custom/path"}
-	got, err := FullPath("/base", r)
+	got, err := FullPath("/base", nil, r)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +67,7 @@ func TestFullPath_WithCustomPath(t *testing.T) {
 
 func TestFullPath_DerivedFromURL(t *testing.T) {
 	r := config.Repo{URL: "git@github.com:user/repo.git"}
-	got, err := FullPath("/base", r)
+	got, err := FullPath("/base", nil, r)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,11 +79,37 @@ func TestFullPath_DerivedFromURL(t *testing.T) {
 
 func TestFullPath_HTTPSUrl(t *testing.T) {
 	r := config.Repo{URL: "https://github.com/org/project.git"}
-	got, err := FullPath("/home/dev", r)
+	got, err := FullPath("/home/dev", nil, r)
 	if err != nil {
 		t.Fatal(err)
 	}
 	want := filepath.Join("/home/dev", "org/project")
+	if got != want {
+		t.Errorf("FullPath = %q, want %q", got, want)
+	}
+}
+
+func TestFullPath_WithAlias(t *testing.T) {
+	r := config.Repo{URL: "git@github.com:nahime0/repo.git"}
+	aliases := map[string]string{"nahime0": "nahime"}
+	got, err := FullPath("/base", aliases, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join("/base", "nahime/repo")
+	if got != want {
+		t.Errorf("FullPath = %q, want %q", got, want)
+	}
+}
+
+func TestFullPath_ExplicitPathIgnoresAlias(t *testing.T) {
+	r := config.Repo{URL: "git@github.com:nahime0/repo.git", Path: "custom/path"}
+	aliases := map[string]string{"nahime0": "nahime"}
+	got, err := FullPath("/base", aliases, r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.Join("/base", "custom/path")
 	if got != want {
 		t.Errorf("FullPath = %q, want %q", got, want)
 	}
@@ -231,5 +257,61 @@ func TestWorktrees_LinkedAreReturned(t *testing.T) {
 	// so compare basenames rather than full paths.
 	if filepath.Base(wts[0].Path) != filepath.Base(wtPath) {
 		t.Errorf("Worktree path basename = %q, want %q", filepath.Base(wts[0].Path), filepath.Base(wtPath))
+	}
+}
+
+func TestApplyOwnerAlias(t *testing.T) {
+	aliases := map[string]string{"nahime0": "nahime", "grp": "work"}
+	tests := []struct {
+		name    string
+		relPath string
+		aliases map[string]string
+		want    string
+	}{
+		{"match owner", "nahime0/repo", aliases, "nahime/repo"},
+		{"match nested owner", "grp/sub/repo", aliases, "work/sub/repo"},
+		{"no match", "other/repo", aliases, "other/repo"},
+		{"nil map", "nahime0/repo", nil, "nahime0/repo"},
+		{"empty map", "nahime0/repo", map[string]string{}, "nahime0/repo"},
+		{"single segment", "nahime0", aliases, "nahime0"},
+		{"empty path", "", aliases, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ApplyOwnerAlias(tt.relPath, tt.aliases); got != tt.want {
+				t.Errorf("ApplyOwnerAlias(%q) = %q, want %q", tt.relPath, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDerivedPath(t *testing.T) {
+	aliases := map[string]string{"nahime0": "nahime"}
+	r := config.Repo{URL: "git@github.com:nahime0/repo.git"}
+	got, err := DerivedPath(r, aliases)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "nahime/repo" {
+		t.Errorf("DerivedPath = %q, want %q", got, "nahime/repo")
+	}
+}
+
+func TestDerivedPath_NoAlias(t *testing.T) {
+	r := config.Repo{URL: "https://github.com/org/project.git"}
+	got, err := DerivedPath(r, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "org/project" {
+		t.Errorf("DerivedPath = %q, want %q", got, "org/project")
+	}
+}
+
+func TestDerivedPath_Error(t *testing.T) {
+	r := config.Repo{URL: "http://a b.com/x"} // space makes url.Parse fail
+	_, err := DerivedPath(r, map[string]string{"a": "b"})
+	if err == nil {
+		t.Fatal("DerivedPath should return an error for an unparseable URL")
 	}
 }

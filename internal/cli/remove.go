@@ -39,7 +39,7 @@ var removeCmd = &cobra.Command{
 				return err
 			}
 		} else {
-			idx, err = resolveOneRepoIndex(cfg.Repos, args[0])
+			idx, err = resolveOneRepoIndex(cfg.Repos, args[0], cfg.Aliases)
 			if err != nil {
 				return err
 			}

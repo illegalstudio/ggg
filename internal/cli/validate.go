@@ -55,7 +55,7 @@ var validateCmd = &cobra.Command{
 		// Check 2: conflicting resolved paths
 		pathIndices := map[string][]int{}
 		for i, r := range cfgExpanded.Repos {
-			fullPath, err := repo.FullPath(cfgExpanded.BaseDir, r)
+			fullPath, err := repo.FullPath(cfgExpanded.BaseDir, cfgExpanded.Aliases, r)
 			if err != nil {
 				warnings = append(warnings, fmt.Sprintf("Invalid URL: %s", r.URL))
 				continue

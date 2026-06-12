@@ -277,6 +277,29 @@ func TestSave_MultipleGroupsRoundtrip(t *testing.T) {
 	}
 }
 
+func TestSaveAndLoad_Aliases(t *testing.T) {
+	testutil.SetupHome(t)
+	cfg := &Config{
+		BaseDir: "~/Developer",
+		Aliases: map[string]string{"nahime0": "nahime"},
+		Repos: []Repo{
+			{URL: "git@github.com:nahime0/repo.git"},
+		},
+	}
+
+	if err := Save(cfg); err != nil {
+		t.Fatal(err)
+	}
+
+	loaded, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error: %v", err)
+	}
+	if loaded.Aliases["nahime0"] != "nahime" {
+		t.Errorf("Aliases[nahime0] = %q, want %q", loaded.Aliases["nahime0"], "nahime")
+	}
+}
+
 func TestWriteDefault_Idempotent(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "ggg", "repositories.yaml")

@@ -31,7 +31,7 @@ var checkoutCmd = &cobra.Command{
 		}
 
 		filter := getFilter(cmd, args[1:])
-		repos = filterByName(repos, filter)
+		repos = filterByName(repos, filter, cfg.Aliases)
 
 		type checkoutJob struct {
 			repo     config.Repo
@@ -46,7 +46,7 @@ var checkoutCmd = &cobra.Command{
 		var jobs []checkoutJob
 
 		for _, r := range repos {
-			fullPath, err := repo.FullPath(cfg.BaseDir, r)
+			fullPath, err := repo.FullPath(cfg.BaseDir, cfg.Aliases, r)
 			if err != nil {
 				continue
 			}

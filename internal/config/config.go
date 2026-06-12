@@ -29,9 +29,10 @@ type Repo struct {
 }
 
 type Config struct {
-	BaseDir      string       `mapstructure:"base_dir" yaml:"base_dir"`
-	PullStrategy PullStrategy `mapstructure:"pull_strategy" yaml:"pull_strategy,omitempty"`
-	Repos        []Repo       `mapstructure:"repos" yaml:"repos"`
+	BaseDir      string            `mapstructure:"base_dir" yaml:"base_dir"`
+	PullStrategy PullStrategy      `mapstructure:"pull_strategy" yaml:"pull_strategy,omitempty"`
+	Aliases      map[string]string `mapstructure:"aliases" yaml:"aliases,omitempty"`
+	Repos        []Repo            `mapstructure:"repos" yaml:"repos"`
 }
 
 // ResolvePullStrategy returns the effective pull strategy for a repo:
@@ -117,6 +118,11 @@ base_dir: ~/Developer
 
 # Default pull strategy for all repos: merge, rebase, ff-only
 # pull_strategy: merge
+
+# Map a repo owner to a folder name. Repos owned by the key are cloned under
+# the value instead, on any host. Repos with an explicit path are unaffected.
+# aliases:
+#   nahime0: nahime
 
 repos:
   - url: git@github.com:user/repo.git

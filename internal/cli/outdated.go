@@ -39,7 +39,7 @@ var outdatedCmd = &cobra.Command{
 		results, err := runParallelWithSpinner(repos, "Fetching from remotes...", func(r config.Repo) outdatedResult {
 			res := outdatedResult{URL: r.URL}
 
-			fullPath, err := repo.FullPath(cfg.BaseDir, r)
+			fullPath, err := repo.FullPath(cfg.BaseDir, cfg.Aliases, r)
 			if err != nil {
 				res.Error = err.Error()
 				return res

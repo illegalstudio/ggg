@@ -104,19 +104,19 @@ func resolveBulkRepos(cmd *cobra.Command, args []string) (*config.Config, []conf
 	}
 
 	filter := getFilter(cmd, args)
-	repos = filterByName(repos, filter)
+	repos = filterByName(repos, filter, cfg.Aliases)
 	return cfg, repos, filter, nil
 }
 
 // filterByName filters repos by substring match on URL, path, or derived path.
-func filterByName(repos []config.Repo, filter string) []config.Repo {
+func filterByName(repos []config.Repo, filter string, aliases map[string]string) []config.Repo {
 	if filter == "" {
 		return repos
 	}
 	filterLower := strings.ToLower(filter)
 	var filtered []config.Repo
 	for _, r := range repos {
-		derived, _ := repo.DerivePathFromURL(r.URL)
+		derived, _ := repo.DerivedPath(r, aliases)
 		if strings.Contains(strings.ToLower(r.URL), filterLower) ||
 			strings.Contains(strings.ToLower(r.Path), filterLower) ||
 			strings.Contains(strings.ToLower(derived), filterLower) {
@@ -128,8 +128,8 @@ func filterByName(repos []config.Repo, filter string) []config.Repo {
 
 // resolveOneRepo returns a single repo using exact-match, partial-match, then
 // interactive disambiguation.
-func resolveOneRepo(repos []config.Repo, query string) (config.Repo, error) {
-	idx, err := resolveOneRepoIndex(repos, query)
+func resolveOneRepo(repos []config.Repo, query string, aliases map[string]string) (config.Repo, error) {
+	idx, err := resolveOneRepoIndex(repos, query, aliases)
 	if err != nil {
 		return config.Repo{}, err
 	}
@@ -138,8 +138,8 @@ func resolveOneRepo(repos []config.Repo, query string) (config.Repo, error) {
 
 // resolveOneRepoIndex returns the index of a single repo using exact-match,
 // partial-match, then interactive disambiguation.
-func resolveOneRepoIndex(repos []config.Repo, query string) (int, error) {
-	matches := matchRepoIndices(repos, query)
+func resolveOneRepoIndex(repos []config.Repo, query string, aliases map[string]string) (int, error) {
+	matches := matchRepoIndices(repos, query, aliases)
 	if len(matches) == 0 {
 		return -1, fmt.Errorf("repository %q not found in config", query)
 	}
@@ -149,10 +149,10 @@ func resolveOneRepoIndex(repos []config.Repo, query string) (int, error) {
 	return selectRepoIndex(repos, matches, fmt.Sprintf("Multiple repositories match %q", query))
 }
 
-func matchRepoIndices(repos []config.Repo, query string) []int {
+func matchRepoIndices(repos []config.Repo, query string, aliases map[string]string) []int {
 	// First pass: exact match.
 	for i, r := range repos {
-		derived, _ := repo.DerivePathFromURL(r.URL)
+		derived, _ := repo.DerivedPath(r, aliases)
 		if r.Path == query || r.URL == query || derived == query {
 			return []int{i}
 		}
@@ -162,7 +162,7 @@ func matchRepoIndices(repos []config.Repo, query string) []int {
 	queryLower := strings.ToLower(query)
 	var matches []int
 	for i, r := range repos {
-		derived, _ := repo.DerivePathFromURL(r.URL)
+		derived, _ := repo.DerivedPath(r, aliases)
 		if strings.Contains(strings.ToLower(r.URL), queryLower) ||
 			strings.Contains(strings.ToLower(r.Path), queryLower) ||
 			strings.Contains(strings.ToLower(derived), queryLower) {

@@ -41,7 +41,7 @@ var cloneCmd = &cobra.Command{
 		var jobs []cloneJob
 		var skips []skipped
 		for _, r := range repos {
-			fullPath, err := repo.FullPath(cfg.BaseDir, r)
+			fullPath, err := repo.FullPath(cfg.BaseDir, cfg.Aliases, r)
 			if err != nil {
 				skips = append(skips, skipped{URL: r.URL, Reason: err.Error()})
 				if !jsonOutput {
