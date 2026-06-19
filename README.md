@@ -1,11 +1,27 @@
-# GGG (Go Git Get)
+<h1 align="center">GGG</h1>
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Follow @nahime0](https://img.shields.io/badge/Follow%20%40nahime0-black?logo=x&logoColor=white)](https://x.com/nahime0)
+<p align="center">
+  <em>All your git repos, declared in one YAML file.</em>
+</p>
 
-> For updates and news, follow me on [X @nahime0](https://x.com/nahime0).
+<p align="center">
+  <a href="https://github.com/illegalstudio/ggg/stargazers"><img src="https://img.shields.io/github/stars/illegalstudio/ggg?style=flat-square&logo=github&logoColor=white&label=stars&color=00ADD8" alt="Stars"></a>
+  <a href="https://github.com/illegalstudio/ggg/releases"><img src="https://img.shields.io/github/downloads/illegalstudio/ggg/total?style=flat-square&logo=github&logoColor=white&label=downloads&color=00ADD8" alt="Downloads"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/illegalstudio/ggg?style=flat-square&color=00ADD8" alt="License: MIT"></a>
+  <a href="https://x.com/nahime0"><img src="https://img.shields.io/badge/Follow-%40nahime0-00ADD8?style=flat-square&logo=x&logoColor=white" alt="Follow @nahime0 on X"></a>
+</p>
 
-Clone and manage git repositories from a YAML configuration file.
+<p align="center">
+  <strong>Declarative YAML config &middot; Clone &amp; sync many repos &middot; Shell <code>cd</code> integration &middot; Single Go binary</strong>
+</p>
+
+<p align="center">
+  GGG (Go Git Get) clones and manages all your git repositories from a single YAML
+  configuration file — clone, pull, push, and check status across every repo at once,
+  jump between them with a real shell <code>cd</code>, and import whole orgs from GitHub.
+</p>
+
+---
 
 GGG has a brother, [GGW](https://github.com/illegalstudio/ggw), that helps you manage your git worktrees.
 
