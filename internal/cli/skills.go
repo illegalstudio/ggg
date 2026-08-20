@@ -210,11 +210,11 @@ func printSkillsInstallResult(result skillsInstallResult) {
 	installed := false
 	for _, item := range result.Installations {
 		if item.Error != "" {
-			fmt.Printf("  %s %s %s\n", ui.Error.Render("✗"), ui.Repo.Render(item.Path), ui.Error.Render(item.Error))
+			fmt.Printf("  %s %s %s\n", ui.Error.Render("✗"), ui.Repo.Render(displayPath(item.Path)), ui.Error.Render(item.Error))
 			continue
 		}
 		installed = true
-		fmt.Printf("  %s %s %s\n", ui.Success.Render("✓"), ui.Repo.Render(item.Path), ui.Muted.Render(string(item.Status)))
+		fmt.Printf("  %s %s %s\n", ui.Success.Render("✓"), ui.Repo.Render(displayPath(item.Path)), ui.Muted.Render(string(item.Status)))
 	}
 	if installed {
 		fmt.Println()
