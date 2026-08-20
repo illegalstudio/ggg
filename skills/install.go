@@ -71,16 +71,7 @@ func ClaudeSkillsInstallPath(home string) string {
 // and the user has not edited, and refuses to touch anything else unless
 // replace is true.
 func Install(destination string, replace bool) (InstallStatus, error) {
-	if destination == "" {
-		return "", fmt.Errorf("skill destination is required")
-	}
-
-	bundledDigest, err := digestBundledSkill()
-	if err != nil {
-		return "", err
-	}
-
-	state, err := inspectInstalledSkill(destination, bundledDigest)
+	state, bundledDigest, err := resolveInstalledState(destination)
 	if err != nil {
 		return "", err
 	}
@@ -129,16 +120,7 @@ func Install(destination string, replace bool) (InstallStatus, error) {
 // touched it, so a plain Install will update it. StateModified and
 // StateUnmanaged both require --force.
 func Inspect(destination string) (State, error) {
-	if destination == "" {
-		return "", fmt.Errorf("skill destination is required")
-	}
-
-	bundledDigest, err := digestBundledSkill()
-	if err != nil {
-		return "", err
-	}
-
-	state, err := inspectInstalledSkill(destination, bundledDigest)
+	state, _, err := resolveInstalledState(destination)
 	if err != nil {
 		return "", err
 	}
@@ -155,6 +137,26 @@ func Inspect(destination string) (State, error) {
 	default:
 		return StateUnmanaged, nil
 	}
+}
+
+// resolveInstalledState performs the setup shared by Install and Inspect:
+// it validates the destination, digests the bundled skill, and inspects
+// whatever is already installed at the destination.
+func resolveInstalledState(destination string) (installedState, string, error) {
+	if destination == "" {
+		return installedState{}, "", fmt.Errorf("skill destination is required")
+	}
+
+	bundledDigest, err := digestBundledSkill()
+	if err != nil {
+		return installedState{}, "", err
+	}
+
+	state, err := inspectInstalledSkill(destination, bundledDigest)
+	if err != nil {
+		return installedState{}, "", err
+	}
+	return state, bundledDigest, nil
 }
 
 func inspectInstalledSkill(destination, bundledDigest string) (installedState, error) {
