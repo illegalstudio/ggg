@@ -160,3 +160,17 @@ func registerFilterCompletion(cmd *cobra.Command) {
 func repoFlagCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 	return configuredRepoCompletions(cmd, toComplete)
 }
+
+func skillTargetCompletion(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	seen := map[string]bool{}
+	var comps []string
+	for _, key := range skillTargetKeys() {
+		addCompletion(&comps, seen, key, toComplete)
+	}
+	sort.Strings(comps)
+	return comps, cobra.ShellCompDirectiveNoFileComp
+}
+
+func registerSkillTargetCompletion(cmd *cobra.Command) {
+	_ = cmd.RegisterFlagCompletionFunc("target", skillTargetCompletion)
+}
