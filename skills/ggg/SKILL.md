@@ -12,12 +12,14 @@ Use the installed `ggg` executable as the source of truth for the available comm
 1. Run `command -v ggg` and `ggg --version` before operating it.
 2. Run `ggg <command> --help` before using flags whose behavior is unclear.
 3. GGG reads `~/.config/ggg/repositories.yaml`. If it is missing, run `ggg init` and tell the user to declare repositories before any bulk operation.
-4. Run `ggg doctor --json` when a command fails unexpectedly. It reports the config file, config syntax, base directory, duplicate URLs, clone status, and remote reachability.
-5. Refresh this skill after upgrading GGG with `ggg skills install`. If GGG reports locally modified skill files, do not add `--force` without the user's approval.
+4. Run `ggg doctor --json` when a command fails unexpectedly. It reports the config file, config syntax, base directory, duplicate URLs, clone status, remote reachability, and — for any AI agent skill destination that already exists — its install state. Act on those skill rows as described in item 5.
+5. Refresh this skill after upgrading GGG. Bare `ggg skills install` opens an interactive menu and fails without a terminal, so name the destination explicitly: `ggg skills install --target claude`. `--target` is repeatable, not comma-separated. Install only to destinations the user already has — `ggg doctor` reports the ones that exist. If GGG reports locally modified skill files, do not add `--force` without the user's approval.
 
 ## Inspect before mutating
 
 These commands only read: `list`, `status`, `outdated`, `diff`, `doctor`, `cd`, `shell-init`.
+
+`outdated` and `doctor` are not local or free: `outdated` runs `git fetch` against every configured remote (which writes updated remote refs into each repository's `.git`), and `doctor` probes every remote for reachability. Neither writes to the working tree, but do not run either unbounded believing them cheap.
 
 Enumerate the exact repositories a command will touch with `ggg list --json` before running anything that writes. Add the same `--group` or `--filter` you intend to use so the preview matches the real selection.
 

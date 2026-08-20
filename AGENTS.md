@@ -9,7 +9,7 @@ GGG is a CLI tool written in Go that manages git repositories from a YAML config
 ```
 cmd/ggg/main.go  → Entry point, calls cli.Execute()
 internal/cli/    → Cobra CLI commands (package cli) grouped as config, repo operations, and diagnostics
-                 → Config commands: init, config, add, remove, import, export, shell-init
+                 → Config commands: init, config, add, remove, import, export, shell-init, skills
                  → Repo commands: clone, pull, push, stash, checkout, diff, open, browse, cd
                  → Info/diagnostics: list, status, outdated, doctor, validate
                  → Shared helpers in internal/cli/helpers.go and matcher helpers in clone.go/remove.go

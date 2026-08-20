@@ -55,7 +55,7 @@ Reinstalling is safe. GGG records a SHA-256 digest of what it installed in a `.g
 
 Installation is atomic: contents are staged in a sibling temporary directory and moved into place, and the previous copy is kept until the move succeeds.
 
-### JSON output
+### JSON Output
 
 `ggg --json skills install` never prompts. Without `--target` it installs every destination. It emits:
 
@@ -270,8 +270,11 @@ Checks performed:
 | Duplicates | Detects duplicate URLs |
 | Cloned | Count of cloned vs. missing repos |
 | Remotes | Reachability of each remote URL (parallel) |
+| AI agent skill | State of each `ggg skills install` destination (`~/.agents/skills/ggg`, `~/.claude/skills/ggg`) — appears **only** for destinations that already exist, so a user who never installed the skill sees no such row |
 
 Unreachable remotes are listed individually at the end.
+
+A check can carry `"warn": true` to mark advisory drift rather than a broken configuration; a check like this serializes as `{"ok": false, "warn": true}`, so a consumer computing "all checks ok" will see a merely-drifted skill copy as not-ok.
 
 ---
 
