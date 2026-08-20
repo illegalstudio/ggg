@@ -341,7 +341,7 @@ func digestInstalledSkill(destination string) (string, error) {
 		}
 	})
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("digest installed skill: %w", err)
 	}
 	return "sha256:" + hex.EncodeToString(digest.Sum(nil)), nil
 }
