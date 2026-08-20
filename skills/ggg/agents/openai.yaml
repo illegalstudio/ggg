@@ -1,0 +1,4 @@
+interface:
+  display_name: "GGG"
+  short_description: "Clone and manage git repositories declared in a YAML config"
+  default_prompt: "Use $ggg to inspect and manage my configured git repositories safely."

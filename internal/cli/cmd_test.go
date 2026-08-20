@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -332,5 +333,47 @@ func TestGroupFilter_MultipleIsError(t *testing.T) {
 	}
 	if _, err := groupFilter(cmd); err == nil {
 		t.Error("expected an error when --group is given more than once")
+	}
+}
+
+func TestDisplayPath(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+
+	separator := string(filepath.Separator)
+	tests := []struct {
+		name string
+		path string
+		want string
+	}{
+		{
+			name: "home itself collapses to a bare tilde",
+			path: home,
+			want: "~",
+		},
+		{
+			name: "a path under home keeps its remainder",
+			path: filepath.Join(home, ".claude", "skills", "ggg"),
+			want: filepath.Join("~", ".claude", "skills", "ggg"),
+		},
+		{
+			name: "a path outside home is returned unchanged",
+			path: filepath.Join(separator, "opt", "ggg"),
+			want: filepath.Join(separator, "opt", "ggg"),
+		},
+		{
+			name: "a sibling that merely shares the home prefix is not shortened",
+			path: home + "-backup",
+			want: home + "-backup",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := displayPath(tt.path); got != tt.want {
+				t.Fatalf("displayPath(%q) = %q, want %q", tt.path, got, tt.want)
+			}
+		})
 	}
 }

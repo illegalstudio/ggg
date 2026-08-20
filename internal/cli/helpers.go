@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -15,6 +16,32 @@ import (
 	"github.com/charmbracelet/huh/spinner"
 	"github.com/spf13/cobra"
 )
+
+// displayPath shortens a path under the user's home directory to a leading "~".
+// It compares against both $HOME and its symlink-resolved form, because a home
+// directory reached through a symlink or a macOS firmlink resolves to a
+// different absolute path than the one os.UserHomeDir reports.
+func displayPath(path string) string {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return path
+	}
+
+	candidates := []string{home}
+	if resolved, err := filepath.EvalSymlinks(home); err == nil && resolved != home {
+		candidates = append(candidates, resolved)
+	}
+
+	for _, candidate := range candidates {
+		if path == candidate {
+			return "~"
+		}
+		if strings.HasPrefix(path, candidate+string(os.PathSeparator)) {
+			return "~" + path[len(candidate):]
+		}
+	}
+	return path
+}
 
 // groupFilter returns the single --group filter value. The filter accepts at
 // most one group (a repo matches when that group is among its groups); passing

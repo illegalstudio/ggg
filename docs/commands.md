@@ -10,9 +10,70 @@ The exact JSON shape depends on the command but follows consistent conventions:
 
 - Bulk operations (`clone`, `pull`, `push`, `stash`, `checkout`, `diff`, `status`, `outdated`, `list`) emit a `{"results": [...]}` or `{"repos": [...]}` array.
 - Single-target operations (`add`, `remove`, `cd`, `init`, `export`, `shell-init`) emit a small object describing the action and its target.
+- `ggg skills install` emits `{"name": ..., "installations": [...]}` and never prompts in JSON mode; use `--target` to narrow the destinations.
 - Per-item errors are reported as a non-empty `"error"` string field on the item; the command's overall exit code is unaffected.
 - Commands that launch external applications (`config`, `open`, `browse`) do not support `--json`; they return a JSON error object with a non-zero exit code.
 - `ggg import --json` requires both an account and one repository argument, for example `ggg --json import myorg myrepo`.
+
+## `ggg skills install`
+
+Install the AI agent skill bundled with the `ggg` binary, so coding agents know how to drive the CLI safely.
+
+```bash
+# Interactive: multi-select menu, both destinations preselected
+ggg skills install
+
+# Non-interactive: one destination
+ggg skills install --target claude
+
+# Non-interactive: every destination, machine-readable result
+ggg --json skills install
+```
+
+| Flag | Description |
+|------|-------------|
+| `--target` | Install only to this destination (`agents`, `claude`). Repeatable. Skips the menu. |
+| `--force` | Replace an existing skill that differs from the bundled version. |
+
+Destinations:
+
+- `~/.agents/skills/ggg` (`agents`) — Codex and other Agent Skills hosts
+- `~/.claude/skills/ggg` (`claude`) — Claude Code
+
+The two destinations are installed independently: a conflict in one is reported on that destination and does not stop the other.
+
+### Behavior
+
+Reinstalling is safe. GGG records a SHA-256 digest of what it installed in a `.ggg-managed.json` marker inside the destination, and compares it against both the bundled skill and the files on disk:
+
+| Situation | Status | Needs `--force` |
+|---|---|---|
+| Destination does not exist | `installed` | no |
+| Files match the bundled skill | `up-to-date` | no |
+| GGG installed it and you have not edited it | `updated` | no |
+| You edited the files, or the directory was not created by GGG | `replaced` | **yes** |
+
+Installation is atomic: contents are staged in a sibling temporary directory and moved into place, and the previous copy is kept until the move succeeds.
+
+The bundled skill is not upgraded automatically. After `brew upgrade ggg` (or any other upgrade), re-run `ggg skills install` to refresh it; the command is idempotent and reports `updated`. `ggg doctor` flags a destination that has fallen behind the binary.
+
+### JSON Output
+
+`ggg --json skills install` never prompts. Without `--target` it installs every destination. It emits:
+
+```json
+{
+  "name": "ggg",
+  "installations": [
+    { "target": "agents", "path": "/Users/me/.agents/skills/ggg", "status": "installed" },
+    { "target": "claude", "path": "/Users/me/.claude/skills/ggg", "error": "skill already exists at ... rerun with --force to replace it" }
+  ]
+}
+```
+
+Per-destination failures appear in `error` and do not change the exit code, matching the other bulk commands. An unknown `--target` is a command-level error and does exit non-zero.
+
+---
 
 ## `ggg init`
 
@@ -211,8 +272,11 @@ Checks performed:
 | Duplicates | Detects duplicate URLs |
 | Cloned | Count of cloned vs. missing repos |
 | Remotes | Reachability of each remote URL (parallel) |
+| AI agent skill | State of each `ggg skills install` destination (`~/.agents/skills/ggg`, `~/.claude/skills/ggg`) — appears **only** for destinations that already exist, so a user who never installed the skill sees no such row |
 
 Unreachable remotes are listed individually at the end.
+
+A check can carry `"warn": true` to mark advisory drift rather than a broken configuration; a check like this serializes as `{"ok": false, "warn": true}`, so a consumer computing "all checks ok" will see a merely-drifted skill copy as not-ok.
 
 ---
 
