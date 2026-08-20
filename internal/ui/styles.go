@@ -16,6 +16,9 @@ var (
 	Info = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#3B82F6"))
 
+	Warning = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#F59E0B"))
+
 	Muted = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#6B7280"))
 

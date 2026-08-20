@@ -139,3 +139,63 @@ func TestInstallSkillTargetsKeepsDestinationsIndependent(t *testing.T) {
 		t.Fatalf("second destination was not installed: %v", err)
 	}
 }
+
+func TestSkillChecksAreSilentWhenNothingIsInstalled(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+
+	if checks := skillChecks(); len(checks) != 0 {
+		t.Fatalf("checks = %+v, want none", checks)
+	}
+}
+
+func TestSkillChecksReportInstalledDestination(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+
+	target := skillTargets(home)[1] // claude
+	if result := installSkillTargets([]skillTarget{target}, false); result.Installations[0].Error != "" {
+		t.Fatalf("install failed: %s", result.Installations[0].Error)
+	}
+
+	checks := skillChecks()
+	if len(checks) != 1 {
+		t.Fatalf("checks = %+v, want exactly one", checks)
+	}
+	if checks[0].Label != "AI agent skill" {
+		t.Fatalf("label = %q, want %q", checks[0].Label, "AI agent skill")
+	}
+	if !checks[0].OK || checks[0].Warn {
+		t.Fatalf("check = %+v, want OK without a warning", checks[0])
+	}
+	if !strings.Contains(checks[0].Message, target.Label) {
+		t.Fatalf("message = %q, want it to mention %q", checks[0].Message, target.Label)
+	}
+}
+
+func TestSkillChecksWarnAboutLocallyModifiedSkill(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+
+	target := skillTargets(home)[0] // agents
+	if result := installSkillTargets([]skillTarget{target}, false); result.Installations[0].Error != "" {
+		t.Fatalf("install failed: %s", result.Installations[0].Error)
+	}
+	if err := os.WriteFile(filepath.Join(target.Path, "SKILL.md"), []byte("hand edited\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	checks := skillChecks()
+	if len(checks) != 1 {
+		t.Fatalf("checks = %+v, want exactly one", checks)
+	}
+	if !checks[0].Warn || checks[0].OK {
+		t.Fatalf("check = %+v, want a warning", checks[0])
+	}
+	if !strings.Contains(checks[0].Message, "--force") {
+		t.Fatalf("message = %q, want it to suggest --force", checks[0].Message)
+	}
+}

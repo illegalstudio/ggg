@@ -8,6 +8,7 @@ import (
 	"github.com/illegalstudio/ggg/internal/config"
 	"github.com/illegalstudio/ggg/internal/repo"
 	"github.com/illegalstudio/ggg/internal/ui"
+	gggskills "github.com/illegalstudio/ggg/skills"
 
 	"github.com/charmbracelet/huh/spinner"
 	"github.com/spf13/cobra"
@@ -17,6 +18,7 @@ type checkResult struct {
 	Label   string `json:"label"`
 	OK      bool   `json:"ok"`
 	Message string `json:"message"`
+	Warn    bool   `json:"warn,omitempty"`
 }
 
 var doctorCmd = &cobra.Command{
@@ -32,6 +34,7 @@ var doctorCmd = &cobra.Command{
 		}
 
 		emit := func(checks []checkResult, remotes []remoteCheck) error {
+			checks = append(checks, skillChecks()...)
 			if done, err := maybeJSON(map[string]any{"checks": checks, "remotes": remotes}); done {
 				return err
 			}
@@ -58,28 +61,28 @@ var doctorCmd = &cobra.Command{
 		// Check 1: config file exists
 		configPath := config.ConfigPath()
 		if _, err := os.Stat(configPath); os.IsNotExist(err) {
-			results = append(results, checkResult{"Config file", false, "not found at " + configPath})
+			results = append(results, checkResult{Label: "Config file", OK: false, Message: "not found at " + configPath})
 			return emit(results, nil)
 		}
-		results = append(results, checkResult{"Config file", true, configPath})
+		results = append(results, checkResult{Label: "Config file", OK: true, Message: configPath})
 
 		// Check 2: config is parseable
 		cfg, err := config.Load()
 		if err != nil {
-			results = append(results, checkResult{"Config syntax", false, err.Error()})
+			results = append(results, checkResult{Label: "Config syntax", OK: false, Message: err.Error()})
 			return emit(results, nil)
 		}
-		results = append(results, checkResult{"Config syntax", true, "valid"})
+		results = append(results, checkResult{Label: "Config syntax", OK: true, Message: "valid"})
 
 		// Check 3: base_dir exists
 		if _, err := os.Stat(cfg.BaseDir); os.IsNotExist(err) {
-			results = append(results, checkResult{"Base directory", false, cfg.BaseDir + " does not exist"})
+			results = append(results, checkResult{Label: "Base directory", OK: false, Message: cfg.BaseDir + " does not exist"})
 		} else {
-			results = append(results, checkResult{"Base directory", true, cfg.BaseDir})
+			results = append(results, checkResult{Label: "Base directory", OK: true, Message: cfg.BaseDir})
 		}
 
 		// Check 4: repos count
-		results = append(results, checkResult{"Repositories", true, fmt.Sprintf("%d configured", len(cfg.Repos))})
+		results = append(results, checkResult{Label: "Repositories", OK: true, Message: fmt.Sprintf("%d configured", len(cfg.Repos))})
 
 		// Check 5: duplicate URLs
 		seen := make(map[string]bool)
@@ -91,9 +94,9 @@ var doctorCmd = &cobra.Command{
 			seen[r.URL] = true
 		}
 		if dupes > 0 {
-			results = append(results, checkResult{"Duplicates", false, fmt.Sprintf("%d duplicate URLs found", dupes)})
+			results = append(results, checkResult{Label: "Duplicates", OK: false, Message: fmt.Sprintf("%d duplicate URLs found", dupes)})
 		} else {
-			results = append(results, checkResult{"Duplicates", true, "none"})
+			results = append(results, checkResult{Label: "Duplicates", OK: true, Message: "none"})
 		}
 
 		// Check 6: clone status
@@ -109,7 +112,7 @@ var doctorCmd = &cobra.Command{
 				notCloned++
 			}
 		}
-		results = append(results, checkResult{"Cloned", true, fmt.Sprintf("%d cloned, %d missing", cloned, notCloned)})
+		results = append(results, checkResult{Label: "Cloned", OK: true, Message: fmt.Sprintf("%d cloned, %d missing", cloned, notCloned)})
 
 		// Check 7: remote reachability (parallel)
 		remoteResults := make([]remoteCheck, len(cfg.Repos))
@@ -141,9 +144,9 @@ var doctorCmd = &cobra.Command{
 			}
 		}
 		if unreachable > 0 {
-			results = append(results, checkResult{"Remotes", false, fmt.Sprintf("%d unreachable", unreachable)})
+			results = append(results, checkResult{Label: "Remotes", OK: false, Message: fmt.Sprintf("%d unreachable", unreachable)})
 		} else {
-			results = append(results, checkResult{"Remotes", true, "all reachable"})
+			results = append(results, checkResult{Label: "Remotes", OK: true, Message: "all reachable"})
 		}
 
 		return emit(results, remoteResults)
@@ -155,11 +158,66 @@ func printResults(results []checkResult) {
 	fmt.Println()
 	for _, r := range results {
 		icon := ui.Success.Render("✓")
-		if !r.OK {
+		switch {
+		case r.Warn:
+			icon = ui.Warning.Render("⚠")
+		case !r.OK:
 			icon = ui.Error.Render("✗")
 		}
 		fmt.Printf("  %s %s %s\n", icon, ui.Repo.Render(r.Label+":"), ui.Muted.Render(r.Message))
 	}
+}
+
+// skillChecks reports one row per *existing* skill installation. Destinations
+// that were never installed produce no row, so doctor stays quiet for users who
+// do not use AI agents.
+func skillChecks() []checkResult {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil
+	}
+
+	var results []checkResult
+	for _, target := range skillTargets(home) {
+		state, err := gggskills.Inspect(target.Path)
+		if err != nil {
+			results = append(results, checkResult{
+				Label:   "AI agent skill",
+				Message: fmt.Sprintf("%s: %v", target.Label, err),
+			})
+			continue
+		}
+
+		switch state {
+		case gggskills.StateMissing:
+			continue
+		case gggskills.StateCurrent:
+			results = append(results, checkResult{
+				Label:   "AI agent skill",
+				OK:      true,
+				Message: target.Label + ": up to date",
+			})
+		case gggskills.StateOutdated:
+			results = append(results, checkResult{
+				Label:   "AI agent skill",
+				Warn:    true,
+				Message: target.Label + ": outdated — run: ggg skills install",
+			})
+		case gggskills.StateModified:
+			results = append(results, checkResult{
+				Label:   "AI agent skill",
+				Warn:    true,
+				Message: target.Label + ": locally modified — run: ggg skills install --force",
+			})
+		default:
+			results = append(results, checkResult{
+				Label:   "AI agent skill",
+				Warn:    true,
+				Message: target.Label + ": unmanaged directory — run: ggg skills install --force",
+			})
+		}
+	}
+	return results
 }
 
 func init() {
