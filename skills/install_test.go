@@ -3,6 +3,7 @@ package skills
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -280,5 +281,41 @@ func TestInspectDoesNotInstall(t *testing.T) {
 	}
 	if _, err := os.Stat(destination); !os.IsNotExist(err) {
 		t.Fatalf("Inspect created the destination: %v", err)
+	}
+}
+
+func TestInspectReportsNotADirectory(t *testing.T) {
+	destination := AgentSkillsInstallPath(t.TempDir())
+	if err := os.MkdirAll(filepath.Dir(destination), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(destination, []byte("not a directory\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	state, err := Inspect(destination)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state != StateNotADirectory {
+		t.Fatalf("state = %q, want %q", state, StateNotADirectory)
+	}
+}
+
+func TestInstallRefusesNonDirectoryDestinationWithoutForce(t *testing.T) {
+	destination := AgentSkillsInstallPath(t.TempDir())
+	if err := os.MkdirAll(filepath.Dir(destination), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(destination, []byte("not a directory\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := Install(destination, false)
+	if err == nil {
+		t.Fatal("expected a conflict for the non-directory destination")
+	}
+	if !strings.Contains(err.Error(), "is not a directory") {
+		t.Fatalf("error = %v, want it to say the destination is not a directory", err)
 	}
 }

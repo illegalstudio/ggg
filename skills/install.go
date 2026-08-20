@@ -33,11 +33,12 @@ const (
 type State string
 
 const (
-	StateMissing   State = "missing"
-	StateCurrent   State = "up-to-date"
-	StateOutdated  State = "outdated"
-	StateModified  State = "modified"
-	StateUnmanaged State = "unmanaged"
+	StateMissing       State = "missing"
+	StateCurrent       State = "up-to-date"
+	StateOutdated      State = "outdated"
+	StateModified      State = "modified"
+	StateUnmanaged     State = "unmanaged"
+	StateNotADirectory State = "not-a-directory"
 )
 
 // installMarker records which installer wrote a skill directory and the digest
@@ -50,6 +51,7 @@ type installMarker struct {
 
 type installedState struct {
 	exists            bool
+	isDir             bool
 	current           bool
 	markerCurrent     bool
 	managedUnmodified bool
@@ -84,6 +86,9 @@ func Install(destination string, replace bool) (InstallStatus, error) {
 		return StatusUnchanged, nil
 	}
 	if state.exists && !state.managedUnmodified && !replace {
+		if !state.isDir {
+			return "", fmt.Errorf("skill destination %s exists but is not a directory (a symlink?); remove it first, or rerun with --force to replace it", destination)
+		}
 		return "", fmt.Errorf("skill already exists at %s and contains different files; rerun with --force to replace it", destination)
 	}
 
@@ -128,6 +133,8 @@ func Inspect(destination string) (State, error) {
 	switch {
 	case !state.exists:
 		return StateMissing, nil
+	case !state.isDir:
+		return StateNotADirectory, nil
 	case state.current:
 		return StateCurrent, nil
 	case state.managedUnmodified:
@@ -168,8 +175,8 @@ func inspectInstalledSkill(destination, bundledDigest string) (installedState, e
 		return installedState{}, fmt.Errorf("inspect skill destination: %w", err)
 	}
 
-	state := installedState{exists: true}
-	if !info.IsDir() {
+	state := installedState{exists: true, isDir: info.IsDir()}
+	if !state.isDir {
 		return state, nil
 	}
 

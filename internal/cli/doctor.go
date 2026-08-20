@@ -209,6 +209,12 @@ func skillChecks() []checkResult {
 				Warn:    true,
 				Message: target.Label + ": locally modified — run: ggg skills install --force",
 			})
+		case gggskills.StateNotADirectory:
+			results = append(results, checkResult{
+				Label:   "AI agent skill",
+				Warn:    true,
+				Message: target.Label + ": not a directory (a symlink?) — left alone; remove it to let ggg manage this destination",
+			})
 		default:
 			results = append(results, checkResult{
 				Label:   "AI agent skill",
