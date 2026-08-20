@@ -884,8 +884,14 @@ func TestCLISkillsInstallRejectsUnknownTarget(t *testing.T) {
 	if err == nil {
 		t.Fatalf("ggg skills install with an unknown target succeeded:\n%s", out)
 	}
-	if !strings.Contains(out, "unknown skill target") {
-		t.Fatalf("unexpected error output:\n%s", out)
+	var errPayload struct {
+		Error string `json:"error"`
+	}
+	if err := json.Unmarshal([]byte(out), &errPayload); err != nil {
+		t.Fatalf("unknown target did not emit valid JSON error: %v\n%s", err, out)
+	}
+	if !strings.Contains(errPayload.Error, "unknown skill target") {
+		t.Fatalf("unexpected JSON error payload: %+v\n%s", errPayload, out)
 	}
 	if _, err := os.Stat(filepath.Join(home, ".claude", "skills", "ggg")); !os.IsNotExist(err) {
 		t.Fatalf("a destination was installed despite the error: %v", err)
@@ -900,7 +906,8 @@ func TestCLISkillsInstallReportsConflictPerDestination(t *testing.T) {
 		t.Fatalf("ggg --json skills install failed: %v\n%s", err, out)
 	}
 
-	skillPath := filepath.Join(home, ".agents", "skills", "ggg", "SKILL.md")
+	skillDir := filepath.Join(home, ".agents", "skills", "ggg")
+	skillPath := filepath.Join(skillDir, "SKILL.md")
 	if err := os.WriteFile(skillPath, []byte("hand edited\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -929,7 +936,7 @@ func TestCLISkillsInstallReportsConflictPerDestination(t *testing.T) {
 	if payload.Installations[1].Error != "" {
 		t.Fatalf("second destination failed: %s\n%s", payload.Installations[1].Error, out)
 	}
-	if got := string(mustReadFile(t, skillPath)); got != "hand edited\n" {
+	if got := testutil.ReadFile(t, skillDir, "SKILL.md"); got != "hand edited\n" {
 		t.Fatalf("conflicting destination was overwritten: %q", got)
 	}
 
@@ -943,16 +950,7 @@ func TestCLISkillsInstallReportsConflictPerDestination(t *testing.T) {
 	if got := payload.Installations[0].Status; got != "replaced" {
 		t.Fatalf("forced install status = %q, want %q\n%s", got, "replaced", out)
 	}
-	if got := string(mustReadFile(t, skillPath)); got == "hand edited\n" {
+	if got := testutil.ReadFile(t, skillDir, "SKILL.md"); got == "hand edited\n" {
 		t.Fatal("--force did not replace the modified skill")
 	}
-}
-
-func mustReadFile(t *testing.T, path string) []byte {
-	t.Helper()
-	contents, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return contents
 }
