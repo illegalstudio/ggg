@@ -29,6 +29,17 @@ const (
 	StatusReplaced  InstallStatus = "replaced"
 )
 
+// State describes an installed skill without changing it.
+type State string
+
+const (
+	StateMissing   State = "missing"
+	StateCurrent   State = "up-to-date"
+	StateOutdated  State = "outdated"
+	StateModified  State = "modified"
+	StateUnmanaged State = "unmanaged"
+)
+
 // installMarker records which installer wrote a skill directory and the digest
 // of the contents it wrote, so a later run can tell "ours, untouched" apart
 // from "edited by the user".
@@ -110,6 +121,40 @@ func Install(destination string, replace bool) (InstallStatus, error) {
 		return StatusUpdated, nil
 	}
 	return StatusReplaced, nil
+}
+
+// Inspect reports the state of a destination without writing to it.
+//
+// StateOutdated means this installer wrote the directory and the user has not
+// touched it, so a plain Install will update it. StateModified and
+// StateUnmanaged both require --force.
+func Inspect(destination string) (State, error) {
+	if destination == "" {
+		return "", fmt.Errorf("skill destination is required")
+	}
+
+	bundledDigest, err := digestBundledSkill()
+	if err != nil {
+		return "", err
+	}
+
+	state, err := inspectInstalledSkill(destination, bundledDigest)
+	if err != nil {
+		return "", err
+	}
+
+	switch {
+	case !state.exists:
+		return StateMissing, nil
+	case state.current:
+		return StateCurrent, nil
+	case state.managedUnmodified:
+		return StateOutdated, nil
+	case state.hasMarker:
+		return StateModified, nil
+	default:
+		return StateUnmanaged, nil
+	}
 }
 
 func inspectInstalledSkill(destination, bundledDigest string) (installedState, error) {

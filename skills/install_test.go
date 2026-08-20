@@ -186,3 +186,99 @@ func mustRead(t *testing.T, path string) []byte {
 	}
 	return contents
 }
+
+func TestInspectReportsMissing(t *testing.T) {
+	state, err := Inspect(AgentSkillsInstallPath(t.TempDir()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state != StateMissing {
+		t.Fatalf("state = %q, want %q", state, StateMissing)
+	}
+}
+
+func TestInspectReportsCurrent(t *testing.T) {
+	destination := AgentSkillsInstallPath(t.TempDir())
+	if _, err := Install(destination, false); err != nil {
+		t.Fatal(err)
+	}
+
+	state, err := Inspect(destination)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state != StateCurrent {
+		t.Fatalf("state = %q, want %q", state, StateCurrent)
+	}
+}
+
+func TestInspectReportsOutdated(t *testing.T) {
+	destination := AgentSkillsInstallPath(t.TempDir())
+	if _, err := Install(destination, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(destination, "SKILL.md"), []byte("previous bundled skill\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	previousDigest, err := digestInstalledSkill(destination)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := writeMarker(destination, previousDigest); err != nil {
+		t.Fatal(err)
+	}
+
+	state, err := Inspect(destination)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state != StateOutdated {
+		t.Fatalf("state = %q, want %q", state, StateOutdated)
+	}
+}
+
+func TestInspectReportsModified(t *testing.T) {
+	destination := AgentSkillsInstallPath(t.TempDir())
+	if _, err := Install(destination, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(destination, "SKILL.md"), []byte("hand edited\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	state, err := Inspect(destination)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state != StateModified {
+		t.Fatalf("state = %q, want %q", state, StateModified)
+	}
+}
+
+func TestInspectReportsUnmanaged(t *testing.T) {
+	destination := AgentSkillsInstallPath(t.TempDir())
+	if err := os.MkdirAll(destination, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(destination, "SKILL.md"), []byte("someone else\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	state, err := Inspect(destination)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state != StateUnmanaged {
+		t.Fatalf("state = %q, want %q", state, StateUnmanaged)
+	}
+}
+
+func TestInspectDoesNotInstall(t *testing.T) {
+	destination := AgentSkillsInstallPath(t.TempDir())
+	if _, err := Inspect(destination); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(destination); !os.IsNotExist(err) {
+		t.Fatalf("Inspect created the destination: %v", err)
+	}
+}
