@@ -143,8 +143,16 @@ jobs:
               bin.install "ggg"
             end
 
+            def caveats
+              <<~EOS
+                Install the bundled GGG skill for AI agents with:
+                  ggg skills install
+              EOS
+            end
+
             test do
               assert_match version.to_s, shell_output("#{bin}/ggg --version")
+              assert_match "skills", shell_output("#{bin}/ggg --help")
             end
           end
           EOF

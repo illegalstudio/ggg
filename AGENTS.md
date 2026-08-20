@@ -17,6 +17,8 @@ internal/config/ → Configuration loading, raw parsing, saving, default templat
 internal/repo/   → Git operations (clone, pull, push, fetch, stash, checkout, status, branch detection, ahead/behind)
 internal/testutil/ → Hermetic test helpers for HOME, config files, and git subprocesses
 internal/ui/     → Shared lipgloss styles for terminal output
+skills/          → Top-level package embedding the AI agent skill shipped with the binary
+                 → skills/ggg/SKILL.md is the installed content; install.go handles digests, markers, and atomic installs
 tests/           → End-to-end CLI tests that build the ggg binary and exercise real commands
 ```
 
@@ -54,6 +56,9 @@ tests/           → End-to-end CLI tests that build the ggg binary and exercise
   - `unsupportedJSON(command)` — returns a structured JSON error for commands where JSON would change the command contract; current unsupported commands are `config`, `open`, and `browse`
   - In JSON mode, Cobra errors are emitted as `{"error": "..."}`, `runParallelWithSpinner` runs synchronously without a spinner, `confirmAll`/`confirmBulkAction` auto-confirm, and `selectRepoIndex` returns an error instead of prompting (be more specific). Each command builds its result data once, then chooses between JSON and styled text via `maybeJSON`.
   - `import --json` requires explicit account and repository arguments and imports only that one repository; it must never treat JSON mode as "select all".
+- **Bundled skill**: `skills/` is the only top-level Go package besides `cmd/`, so `skills/ggg/SKILL.md` stays browsable on GitHub. `skills.Install` writes it; `skills.Inspect` reports its state without writing. Never duplicate `docs/` content into `SKILL.md` — point at `ggg <command> --help` instead.
+- **Destination flags**: `ggg skills install --target` is repeatable and validated against `skillTargetKeys()`. Unlike pxon, the command never prompts under `--json`; it installs every destination `--target` did not narrow.
+- **Doctor severity**: `checkResult` has three renderings — `Warn: true` (⚠, `ui.Warning`), `OK: false` (✗), and `OK: true` (✓). Use `Warn` for actionable drift that is not a broken configuration. Build `checkResult` values with keyed literals.
 
 ## Testing
 
@@ -72,6 +77,7 @@ tests/           → End-to-end CLI tests that build the ggg binary and exercise
   - `internal/config/`: Write, save/load roundtrip, path validation
   - `internal/cli/`: filterRepo (exact, partial, case-insensitive), filterByGroup, findRepoIndex, URL-to-browser conversion
   - `tests/`: binary-level flows such as `init`, `shell-init`, add/remove/list, export, clone, status, outdated, pull, push, diff, stash, checkout, open, browse, doctor, import, and `cd`
+  - `skills/`: digest determinism, marker handling, install statuses (`installed`, `up-to-date`, `updated`, `replaced`), and `Inspect` states
 - **Convention**: Use table-driven tests for functions with multiple input/output cases; use `t.TempDir()` for filesystem tests
 
 ## Documentation

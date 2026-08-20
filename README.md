@@ -47,6 +47,16 @@ cd ggg
 make && make install
 ```
 
+### AI agent skill
+
+GGG bundles an Agent Skills-compatible skill that teaches AI agents how to operate the CLI safely. Install it for the current user after installing or upgrading GGG:
+
+```bash
+ggg skills install
+```
+
+Both `~/.agents/skills/ggg` (Codex and compatible hosts) and `~/.claude/skills/ggg` (Claude Code) are preselected. Reinstalling is safe: an unmodified copy is updated in place, and local edits are protected until you pass `--force`. `ggg doctor` warns when an installed copy falls behind the binary.
+
 ## Quick Start
 
 ```bash
@@ -97,6 +107,7 @@ ggg --version
 | `ggg outdated` | Show repositories that are behind their remote |
 | `ggg validate` | Validate config for duplicates and conflicts |
 | `ggg shell-init` | Print shell integration script (`gcd` alias and completions) |
+| `ggg skills install` | Install the bundled AI agent skill for Claude Code and Agent Skills hosts |
 
 Most commands support `--group/-g` to filter by group. Data-producing commands support `--json` for machine-readable output; commands that launch an editor or browser report that JSON is unsupported.
 
