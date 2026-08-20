@@ -17,7 +17,7 @@ The exact JSON shape depends on the command but follows consistent conventions:
 
 ## `ggg skills install`
 
-Install the AI agent skill bundled with the `ggg` binary.
+Install the AI agent skill bundled with the `ggg` binary, so coding agents know how to drive the CLI safely.
 
 ```bash
 # Interactive: multi-select menu, both destinations preselected
@@ -54,6 +54,8 @@ Reinstalling is safe. GGG records a SHA-256 digest of what it installed in a `.g
 | You edited the files, or the directory was not created by GGG | `replaced` | **yes** |
 
 Installation is atomic: contents are staged in a sibling temporary directory and moved into place, and the previous copy is kept until the move succeeds.
+
+The bundled skill is not upgraded automatically. After `brew upgrade ggg` (or any other upgrade), re-run `ggg skills install` to refresh it; the command is idempotent and reports `updated`. `ggg doctor` flags a destination that has fallen behind the binary.
 
 ### JSON Output
 
