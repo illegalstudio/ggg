@@ -34,6 +34,32 @@ func TestWriteDefault(t *testing.T) {
 	if !strings.Contains(content, "repos") {
 		t.Error("config should contain repos")
 	}
+	if !strings.Contains(content, "suppress_skills_notice") {
+		t.Error("config should document suppress_skills_notice")
+	}
+}
+
+func TestSuppressSkillsNotice(t *testing.T) {
+	home := testutil.SetupHome(t)
+
+	if got, err := SuppressSkillsNotice(); err != nil || got {
+		t.Fatalf("no config file: got (%v, %v), want (false, nil)", got, err)
+	}
+
+	testutil.WriteConfig(t, home, `
+repos: []
+`)
+	if got, err := SuppressSkillsNotice(); err != nil || got {
+		t.Fatalf("key unset: got (%v, %v), want (false, nil)", got, err)
+	}
+
+	testutil.WriteConfig(t, home, `
+suppress_skills_notice: true
+repos: []
+`)
+	if got, err := SuppressSkillsNotice(); err != nil || !got {
+		t.Fatalf("key true: got (%v, %v), want (true, nil)", got, err)
+	}
 }
 
 func TestWriteDefault_CreatesDirectory(t *testing.T) {

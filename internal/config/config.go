@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -29,10 +30,11 @@ type Repo struct {
 }
 
 type Config struct {
-	BaseDir      string            `mapstructure:"base_dir" yaml:"base_dir"`
-	PullStrategy PullStrategy      `mapstructure:"pull_strategy" yaml:"pull_strategy,omitempty"`
-	Aliases      map[string]string `mapstructure:"aliases" yaml:"aliases,omitempty"`
-	Repos        []Repo            `mapstructure:"repos" yaml:"repos"`
+	BaseDir              string            `mapstructure:"base_dir" yaml:"base_dir"`
+	PullStrategy         PullStrategy      `mapstructure:"pull_strategy" yaml:"pull_strategy,omitempty"`
+	Aliases              map[string]string `mapstructure:"aliases" yaml:"aliases,omitempty"`
+	SuppressSkillsNotice bool              `mapstructure:"suppress_skills_notice" yaml:"suppress_skills_notice,omitempty"`
+	Repos                []Repo            `mapstructure:"repos" yaml:"repos"`
 }
 
 // ResolvePullStrategy returns the effective pull strategy for a repo:
@@ -50,6 +52,19 @@ func (c *Config) ResolvePullStrategy(r Repo) PullStrategy {
 func ConfigPath() string {
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".config", "ggg", "repositories.yaml")
+}
+
+// SuppressSkillsNotice reports whether the stale-skill notice is disabled. A
+// missing config file or an unset key yields (false, nil).
+func SuppressSkillsNotice() (bool, error) {
+	cfg, err := LoadRaw()
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return false, nil
+		}
+		return false, err
+	}
+	return cfg.SuppressSkillsNotice, nil
 }
 
 func Load() (*Config, error) {
@@ -123,6 +138,10 @@ base_dir: ~/Developer
 # the value instead, on any host. Repos with an explicit path are unaffected.
 # aliases:
 #   nahime0: nahime
+
+# suppress_skills_notice: set to true to stop ggg from reminding you when an
+# installed AI agent skill no longer matches the one bundled with the binary.
+# suppress_skills_notice: true
 
 repos:
   - url: git@github.com:user/repo.git

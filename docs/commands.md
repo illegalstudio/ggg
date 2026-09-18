@@ -11,6 +11,7 @@ The exact JSON shape depends on the command but follows consistent conventions:
 - Bulk operations (`clone`, `pull`, `push`, `stash`, `checkout`, `diff`, `status`, `outdated`, `list`) emit a `{"results": [...]}` or `{"repos": [...]}` array.
 - Single-target operations (`add`, `remove`, `cd`, `init`, `export`, `shell-init`) emit a small object describing the action and its target.
 - `ggg skills install` emits `{"name": ..., "installations": [...]}` and never prompts in JSON mode; use `--target` to narrow the destinations.
+- `ggg skills verify` emits `{ "name": ..., "verifications": [...] }` and exits non-zero when an installed skill is stale; the JSON payload is still emitted in that case.
 - Per-item errors are reported as a non-empty `"error"` string field on the item; the command's overall exit code is unaffected.
 - Commands that launch external applications (`config`, `open`, `browse`) do not support `--json`; they return a JSON error object with a non-zero exit code.
 - `ggg import --json` requires both an account and one repository argument, for example `ggg --json import myorg myrepo`.
@@ -57,6 +58,18 @@ Installation is atomic: contents are staged in a sibling temporary directory and
 
 The bundled skill is not upgraded automatically. After `brew upgrade ggg` (or any other upgrade), re-run `ggg skills install` to refresh it; the command is idempotent and reports `updated`. `ggg doctor` flags a destination that has fallen behind the binary.
 
+### Stale-skill notice
+
+When an installed skill no longer matches the one bundled with the running
+binary, interactive commands end with a short stderr notice pointing at the
+destination and at the remedies. The notice never appears under `--json`, never
+on `skills`, `shell-init`, `completion`, `cd`, any `--help` or help
+output, shell tab-completion internals, or version output,
+and never when no skill is installed. Check on demand with
+[`ggg skills verify`](#ggg-skills-verify); silence the notice permanently by
+setting `suppress_skills_notice: true` in the
+[config file](configuration.md).
+
 ### JSON Output
 
 `ggg --json skills install` never prompts. Without `--target` it installs every destination. It emits:
@@ -72,6 +85,56 @@ The bundled skill is not upgraded automatically. After `brew upgrade ggg` (or an
 ```
 
 Per-destination failures appear in `error` and do not change the exit code, matching the other bulk commands. An unknown `--target` is a command-level error and does exit non-zero.
+
+## `ggg skills verify`
+
+Check whether the installed copies of the bundled AI agent skill match the
+skill carried by the running `ggg` binary, using the SHA-256 digests recorded
+at install time. Read-only: nothing is written, nothing is prompted for.
+
+```bash
+# Every known destination
+ggg skills verify
+
+# One destination only
+ggg skills verify --target claude
+
+# Machine-readable, for scripts and CI
+ggg --json skills verify
+```
+
+| Flag | Description |
+|------|-------------|
+| `--target` | Verify only this destination (`agents`, `claude`). Repeatable. |
+
+Each destination reports one status:
+
+| Status | Meaning |
+|---|---|
+| `up-to-date` | matches the bundled skill |
+| `outdated` | installed by ggg, never edited, but from another ggg version — `ggg skills install` refreshes it |
+| `modified` | differs from the bundled skill and was edited locally or not written by ggg — refreshing it needs `ggg skills install --force` |
+| `not-installed` | no skill at this destination |
+
+The exit code is `1` when any installed destination is `outdated` or
+`modified`, so the check can gate scripts. Destinations that are not installed
+do not fail the command.
+
+### JSON output
+
+```json
+{
+  "name": "ggg",
+  "verifications": [
+    { "target": "agents", "path": "/Users/me/.agents/skills/ggg", "status": "outdated" },
+    { "target": "claude", "path": "/Users/me/.claude/skills/ggg", "status": "not-installed" }
+  ]
+}
+```
+
+When the exit code is `1` because a skill is stale, the full payload above is
+still emitted. Per-destination inspection failures appear in the item's `error`
+field and do not change the exit code.
 
 ---
 

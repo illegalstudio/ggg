@@ -54,7 +54,8 @@ func Execute() {
 	rootCmd.SetHelpCommandGroupID(GroupInfo)
 	rootCmd.SetCompletionCommandGroupID(GroupConfig)
 
-	if err := rootCmd.Execute(); err != nil {
+	cmd, err := rootCmd.ExecuteC()
+	if err != nil {
 		if jsonOutput {
 			var payloadErr interface{ JSONPayload() any }
 			if errors.As(err, &payloadErr) {
@@ -67,6 +68,8 @@ func Execute() {
 		}
 		os.Exit(1)
 	}
+
+	maybeNoticeStaleSkill(cmd)
 }
 
 func jsonFlagRequested(args []string) bool {
