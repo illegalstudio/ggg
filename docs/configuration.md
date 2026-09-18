@@ -23,6 +23,7 @@ ggg init
 | `base_dir` | `string` | No | `~/Developer` | Root directory where repositories are cloned. Supports `~` expansion. |
 | `pull_strategy` | `string` | No | `merge` | Default pull strategy for all repos. |
 | `aliases` | `map` | No | — | Map of repo owner → folder name. Repos owned by the key are cloned under the value (on any host) unless they set an explicit `path`. |
+| `suppress_skills_notice` | `bool` | No | `false` | Set to `true` to silence the stderr notice ggg prints when an installed AI agent skill no longer matches the bundled one. |
 | `repos` | `list` | Yes | — | List of repository entries. |
 
 ### Repository Entry (`repos[]`)
@@ -51,6 +52,21 @@ The effective pull strategy for a repo is resolved in this order:
 1. **Repo-level** `pull_strategy` (if set)
 2. **Global** `pull_strategy` (if set)
 3. **Default**: `merge`
+
+## Stale-skill notice
+
+After any interactive command, ggg compares the AI agent skills installed under
+`~/.agents/skills/ggg` and `~/.claude/skills/ggg` with the one bundled in the
+running binary. When an installed copy exists and its digest differs, a short
+stderr notice explains how to update (`ggg skills install`), how to check on
+demand (`ggg skills verify`), and how to silence the reminder:
+
+```yaml
+suppress_skills_notice: true
+```
+
+The notice never appears in `--json` output, so scripts are unaffected. Set the
+flag if you deliberately maintain your own edits of the skill.
 
 ## Owner Aliases
 
@@ -87,6 +103,10 @@ pull_strategy: rebase
 # Rewrite owner segments in derived paths (host-independent)
 aliases:
   nahime0: nahime
+
+# Silence the stderr notice when an installed AI agent skill no longer
+# matches the one bundled with the running binary
+# suppress_skills_notice: true
 
 repos:
   # Minimal — URL only, path derived as user/app

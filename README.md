@@ -55,7 +55,7 @@ GGG bundles an Agent Skills-compatible skill that teaches AI agents how to opera
 ggg skills install
 ```
 
-Both `~/.agents/skills/ggg` (Codex and compatible hosts) and `~/.claude/skills/ggg` (Claude Code) are preselected. Reinstalling is safe: an unmodified copy is updated in place, and local edits are protected until you pass `--force`. `ggg doctor` warns when an installed copy falls behind the binary.
+Both `~/.agents/skills/ggg` (Codex and compatible hosts) and `~/.claude/skills/ggg` (Claude Code) are preselected. Reinstalling is safe: an unmodified copy is updated in place, and local edits are protected until you pass `--force`. When an installed skill falls out of sync with the binary, ggg says so on stderr after interactive commands; `ggg skills verify` checks on demand, and `suppress_skills_notice: true` in the config silences the reminder. See [Commands](docs/commands.md#ggg-skills-install) for the full reference.
 
 ## Quick Start
 
@@ -108,6 +108,7 @@ ggg --version
 | `ggg validate` | Validate config for duplicates and conflicts |
 | `ggg shell-init` | Print shell integration script (`gcd` alias and completions) |
 | `ggg skills install` | Install the bundled AI agent skill for Claude Code and Agent Skills hosts |
+| `ggg skills verify` | Check whether installed AI agent skills match this binary |
 
 Most commands support `--group/-g` to filter by group. Data-producing commands support `--json` for machine-readable output; commands that launch an editor or browser report that JSON is unsupported.
 
