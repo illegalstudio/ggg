@@ -119,6 +119,6 @@ repos:
 make && make install
 ```
 
-Other Makefile targets: `make build`, `make test`, `make vet`, `make fmt`, `make clean`.
+Other Makefile targets: `make build`, `make test`, `make vet`, `make fmt`, `make clean`, `make release`.
 
 The `ggg` binary is in `.gitignore`.
