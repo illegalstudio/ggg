@@ -33,6 +33,17 @@ GGG has a brother, [GGW](https://github.com/illegalstudio/ggw), that helps you m
 brew install illegalstudio/tap/ggg
 ```
 
+### mise
+
+```bash
+mise use -g github:illegalstudio/ggg   # install globally
+mise use github:illegalstudio/ggg      # or pin it in the project's mise.toml
+```
+
+ggg is not in the aqua registry, so the `github:` prefix is required. mise
+picks the right release archive for your OS/arch automatically; pin a version
+with `github:illegalstudio/ggg@0.2.2`.
+
 ### Go
 
 ```bash
