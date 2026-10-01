@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="GGG logo" width="160" height="160">
+</p>
+
 <h1 align="center">GGG</h1>
 
 <p align="center">
@@ -17,7 +21,7 @@
 
 <p align="center">
   GGG (Go Git Get) clones and manages all your git repositories from a single YAML
-  configuration file — clone, pull, push, and check status across every repo at once,
+  configuration file: clone, pull, push, and check status across every repo at once,
   jump between them with a real shell <code>cd</code>, and import whole orgs from GitHub.
 </p>
 
