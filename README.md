@@ -81,6 +81,9 @@ ggg init
 # Edit the config to add your repositories
 # vim ~/.config/ggg/repositories.yaml
 
+# On another machine that shares the config but clones elsewhere
+ggg init --local --base-dir /data/dev
+
 # Clone all configured repositories
 ggg clone
 
@@ -135,6 +138,7 @@ Full documentation is available in the [`docs/`](docs/) directory:
 - [Commands](docs/commands.md)
 - [Groups](docs/groups.md)
 - [Shell Integration](docs/shell-integration.md)
+- A shared config can be synced between machines while each machine keeps its own clone root, through `repositories.local.yaml` or `GGG_BASE_DIR`; see [Machine-local overrides](docs/configuration.md#machine-local-overrides).
 - Owner aliases let you map a repo owner (e.g. `nahime0`) to a folder name (`nahime`); see the [Configuration Reference](docs/configuration.md#owner-aliases).
 
 ## License

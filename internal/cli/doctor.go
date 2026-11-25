@@ -65,6 +65,10 @@ var doctorCmd = &cobra.Command{
 			return emit(results, nil)
 		}
 		results = append(results, checkResult{Label: "Config file", OK: true, Message: configPath})
+		localPath := config.LocalConfigPath()
+		if _, err := os.Stat(localPath); err == nil {
+			results = append(results, checkResult{Label: "Local config", OK: true, Message: localPath})
+		}
 
 		// Check 2: config is parseable
 		cfg, err := config.Load()
@@ -74,11 +78,12 @@ var doctorCmd = &cobra.Command{
 		}
 		results = append(results, checkResult{Label: "Config syntax", OK: true, Message: "valid"})
 
-		// Check 3: base_dir exists
+		// Check 3: base_dir exists, reported with where it came from
+		origin := " (" + cfg.BaseDirSource.Describe() + ")"
 		if _, err := os.Stat(cfg.BaseDir); os.IsNotExist(err) {
-			results = append(results, checkResult{Label: "Base directory", OK: false, Message: cfg.BaseDir + " does not exist"})
+			results = append(results, checkResult{Label: "Base directory", OK: false, Message: cfg.BaseDir + " does not exist" + origin})
 		} else {
-			results = append(results, checkResult{Label: "Base directory", OK: true, Message: cfg.BaseDir})
+			results = append(results, checkResult{Label: "Base directory", OK: true, Message: cfg.BaseDir + origin})
 		}
 
 		// Check 4: repos count

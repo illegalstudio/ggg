@@ -15,7 +15,7 @@ func TestWriteDefault(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "ggg", "repositories.yaml")
 
-	if err := WriteDefault(path); err != nil {
+	if err := WriteDefault(path, ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -66,7 +66,7 @@ func TestWriteDefault_CreatesDirectory(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "nested", "deep", "repositories.yaml")
 
-	if err := WriteDefault(path); err != nil {
+	if err := WriteDefault(path, ""); err != nil {
 		t.Fatal(err)
 	}
 
@@ -330,17 +330,318 @@ func TestWriteDefault_Idempotent(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "ggg", "repositories.yaml")
 
-	if err := WriteDefault(path); err != nil {
+	if err := WriteDefault(path, ""); err != nil {
 		t.Fatal(err)
 	}
 	data1, _ := os.ReadFile(path)
 
-	if err := WriteDefault(path); err != nil {
+	if err := WriteDefault(path, ""); err != nil {
 		t.Fatal(err)
 	}
 	data2, _ := os.ReadFile(path)
 
 	if string(data1) != string(data2) {
 		t.Error("WriteDefault should be idempotent")
+	}
+}
+
+func TestWriteDefault_CustomBaseDir(t *testing.T) {
+	home := testutil.SetupHome(t)
+	if err := WriteDefault(ConfigPath(), "~/code"); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := filepath.Join(home, "code"); cfg.BaseDir != want {
+		t.Errorf("BaseDir = %q, want %q", cfg.BaseDir, want)
+	}
+}
+
+func TestExpandPath(t *testing.T) {
+	home := filepath.FromSlash("/home/tester")
+	t.Setenv("GGG_TEST_ROOT", filepath.FromSlash("/data"))
+	t.Setenv("GGG_TEST_EMPTY", "")
+
+	tests := []struct {
+		name    string
+		in      string
+		want    string
+		wantErr string
+	}{
+		{name: "bare tilde", in: "~", want: home},
+		{name: "tilde prefix", in: "~/Developer", want: filepath.Join(home, "Developer")},
+		{name: "absolute", in: "/srv/dev", want: "/srv/dev"},
+		{name: "dollar var", in: "$GGG_TEST_ROOT/dev", want: filepath.FromSlash("/data") + "/dev"},
+		{name: "braced var", in: "${GGG_TEST_ROOT}/dev", want: filepath.FromSlash("/data") + "/dev"},
+		{name: "unset var", in: "$GGG_TEST_UNSET/dev", wantErr: "GGG_TEST_UNSET"},
+		{name: "empty var", in: "${GGG_TEST_EMPTY}/dev", wantErr: "GGG_TEST_EMPTY"},
+		{name: "tilde not first", in: "/x/~/y", want: "/x/~/y"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ExpandPath(tt.in, home)
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("ExpandPath(%q) error = %v, want mention of %q", tt.in, err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("ExpandPath(%q) unexpected error: %v", tt.in, err)
+			}
+			if got != tt.want {
+				t.Errorf("ExpandPath(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLoad_BaseDirPrecedence(t *testing.T) {
+	tests := []struct {
+		name       string
+		shared     string
+		local      string
+		env        string
+		wantRel    string
+		wantSource BaseDirSource
+	}{
+		{name: "default", shared: "repos: []\n", wantRel: "Developer", wantSource: BaseDirFromDefault},
+		{name: "shared", shared: "base_dir: ~/Shared\nrepos: []\n", wantRel: "Shared", wantSource: BaseDirFromConfig},
+		{name: "local over shared", shared: "base_dir: ~/Shared\nrepos: []\n", local: "base_dir: ~/Local\n", wantRel: "Local", wantSource: BaseDirFromLocal},
+		{name: "local without base_dir keeps shared", shared: "base_dir: ~/Shared\nrepos: []\n", local: "pull_strategy: rebase\n", wantRel: "Shared", wantSource: BaseDirFromConfig},
+		{name: "env over local", shared: "base_dir: ~/Shared\nrepos: []\n", local: "base_dir: ~/Local\n", env: "~/Env", wantRel: "Env", wantSource: BaseDirFromEnv},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			home := testutil.SetupHome(t)
+			testutil.WriteConfig(t, home, tt.shared)
+			if tt.local != "" {
+				testutil.WriteLocalConfig(t, home, tt.local)
+			}
+			t.Setenv(BaseDirEnv, tt.env)
+
+			cfg, err := Load()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if want := filepath.Join(home, tt.wantRel); cfg.BaseDir != want {
+				t.Errorf("BaseDir = %q, want %q", cfg.BaseDir, want)
+			}
+			if cfg.BaseDirSource != tt.wantSource {
+				t.Errorf("BaseDirSource = %q, want %q", cfg.BaseDirSource, tt.wantSource)
+			}
+		})
+	}
+}
+
+func TestLoad_BaseDirWithUnsetVariableFails(t *testing.T) {
+	home := testutil.SetupHome(t)
+	testutil.WriteConfig(t, home, `
+base_dir: $GGG_TEST_UNSET_ROOT/dev
+repos: []
+`)
+
+	_, err := Load()
+	if err == nil || !strings.Contains(err.Error(), "GGG_TEST_UNSET_ROOT") {
+		t.Fatalf("Load() error = %v, want mention of the unset variable", err)
+	}
+}
+
+func TestLoad_BaseDirExpandsVariable(t *testing.T) {
+	home := testutil.SetupHome(t)
+	root := t.TempDir()
+	t.Setenv("GGG_TEST_DEV_ROOT", root)
+	testutil.WriteConfig(t, home, `
+base_dir: ${GGG_TEST_DEV_ROOT}/src
+repos: []
+`)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := root + "/src"; cfg.BaseDir != want {
+		t.Errorf("BaseDir = %q, want %q", cfg.BaseDir, want)
+	}
+}
+
+func TestLoad_LocalOverridesOtherSettings(t *testing.T) {
+	home := testutil.SetupHome(t)
+	testutil.WriteConfig(t, home, `
+pull_strategy: merge
+aliases:
+  shared: one
+  both: shared-value
+repos:
+  - url: git@github.com:user/repo.git
+`)
+	testutil.WriteLocalConfig(t, home, `
+pull_strategy: ff-only
+aliases:
+  both: local-value
+  local: two
+suppress_skills_notice: true
+`)
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.PullStrategy != PullFFOnly {
+		t.Errorf("PullStrategy = %q, want %q", cfg.PullStrategy, PullFFOnly)
+	}
+	wantAliases := map[string]string{"shared": "one", "both": "local-value", "local": "two"}
+	for k, v := range wantAliases {
+		if cfg.Aliases[k] != v {
+			t.Errorf("Aliases[%q] = %q, want %q", k, cfg.Aliases[k], v)
+		}
+	}
+	if !cfg.SuppressSkillsNotice {
+		t.Error("SuppressSkillsNotice should come from the local file")
+	}
+	if len(cfg.Repos) != 1 {
+		t.Fatalf("got %d repos, want 1", len(cfg.Repos))
+	}
+}
+
+func TestLoadLocal(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		wantErr string
+	}{
+		{name: "comments only", content: "# nothing here\n"},
+		{name: "empty", content: ""},
+		{name: "repos rejected", content: "repos:\n  - url: git@github.com:a/b.git\n", wantErr: "cannot define repos"},
+		{name: "unknown key rejected", content: "basedir: ~/typo\n", wantErr: `unknown key "basedir"`},
+		{name: "invalid pull strategy", content: "pull_strategy: squash\n", wantErr: "invalid pull_strategy"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			home := testutil.SetupHome(t)
+			testutil.WriteLocalConfig(t, home, tt.content)
+
+			local, err := LoadLocal()
+			if tt.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+					t.Fatalf("LoadLocal() error = %v, want mention of %q", err, tt.wantErr)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("LoadLocal() unexpected error: %v", err)
+			}
+			if local == nil {
+				t.Fatal("LoadLocal() = nil, want an empty LocalConfig for an existing file")
+			}
+		})
+	}
+}
+
+func TestLoadLocal_MissingFile(t *testing.T) {
+	testutil.SetupHome(t)
+
+	local, err := LoadLocal()
+	if err != nil || local != nil {
+		t.Fatalf("LoadLocal() = (%v, %v), want (nil, nil)", local, err)
+	}
+}
+
+func TestLoad_InvalidLocalFails(t *testing.T) {
+	home := testutil.SetupHome(t)
+	testutil.WriteConfig(t, home, "repos: []\n")
+	testutil.WriteLocalConfig(t, home, "repos: []\n")
+
+	if _, err := Load(); err == nil || !strings.Contains(err.Error(), "cannot define repos") {
+		t.Fatalf("Load() error = %v, want local repos rejection", err)
+	}
+}
+
+func TestWriteLocal_Roundtrip(t *testing.T) {
+	home := testutil.SetupHome(t)
+	testutil.WriteConfig(t, home, "base_dir: /shared\nrepos: []\n")
+
+	// A bare ~ must be quoted, or YAML would read it as null.
+	if err := WriteLocal(LocalConfigPath(), "~"); err != nil {
+		t.Fatal(err)
+	}
+
+	local, err := LoadLocal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if local.BaseDir != "~" {
+		t.Errorf("local BaseDir = %q, want %q", local.BaseDir, "~")
+	}
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.BaseDir != home || cfg.BaseDirSource != BaseDirFromLocal {
+		t.Errorf("Load() BaseDir = %q (%s), want %q (local)", cfg.BaseDir, cfg.BaseDirSource, home)
+	}
+}
+
+func TestSave_DoesNotLeakLocalValues(t *testing.T) {
+	home := testutil.SetupHome(t)
+	testutil.WriteConfig(t, home, `
+base_dir: ~/Shared
+repos:
+  - url: git@github.com:user/repo.git
+`)
+	testutil.WriteLocalConfig(t, home, `
+base_dir: /machine/only
+pull_strategy: rebase
+`)
+
+	raw, err := LoadRaw()
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw.Repos = append(raw.Repos, Repo{URL: "git@github.com:user/other.git"})
+	if err := Save(raw); err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.ReadFile(ConfigPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := string(data)
+	if strings.Contains(content, "/machine/only") || strings.Contains(content, "rebase") {
+		t.Fatalf("shared config picked up local values:\n%s", content)
+	}
+	if !strings.Contains(content, "base_dir: ~/Shared") {
+		t.Fatalf("shared base_dir changed:\n%s", content)
+	}
+}
+
+func TestSuppressSkillsNotice_LocalOverride(t *testing.T) {
+	home := testutil.SetupHome(t)
+
+	// Local file alone, without a shared config.
+	testutil.WriteLocalConfig(t, home, "suppress_skills_notice: true\n")
+	if got, err := SuppressSkillsNotice(); err != nil || !got {
+		t.Fatalf("local only: got (%v, %v), want (true, nil)", got, err)
+	}
+
+	// Local false beats shared true.
+	testutil.WriteConfig(t, home, "suppress_skills_notice: true\nrepos: []\n")
+	testutil.WriteLocalConfig(t, home, "suppress_skills_notice: false\n")
+	if got, err := SuppressSkillsNotice(); err != nil || got {
+		t.Fatalf("local false: got (%v, %v), want (false, nil)", got, err)
+	}
+
+	// Local without the key keeps the shared value.
+	testutil.WriteLocalConfig(t, home, "base_dir: /x\n")
+	if got, err := SuppressSkillsNotice(); err != nil || !got {
+		t.Fatalf("local unset: got (%v, %v), want (true, nil)", got, err)
 	}
 }

@@ -29,6 +29,9 @@ func SetupHome(t *testing.T) string {
 	t.Setenv("GIT_CONFIG_NOSYSTEM", "1")
 	t.Setenv("GIT_CONFIG_GLOBAL", filepath.Join(home, ".gitconfig"))
 	t.Setenv("GIT_TERMINAL_PROMPT", "0")
+	// Neutralize a developer's own base_dir override; tests that need it set
+	// it again after SetupHome, and ChildEnv passes it through.
+	t.Setenv("GGG_BASE_DIR", "")
 
 	return home
 }
@@ -65,6 +68,27 @@ func WriteConfig(t *testing.T, home, content string) string {
 	}
 	if err := os.WriteFile(path, []byte(strings.TrimLeft(content, "\n")), 0644); err != nil {
 		t.Fatalf("write config: %v", err)
+	}
+	return path
+}
+
+// LocalConfigPath returns the expected GGG machine-local config path for a
+// specific test home.
+func LocalConfigPath(home string) string {
+	return filepath.Join(home, ".config", "ggg", "repositories.local.yaml")
+}
+
+// WriteLocalConfig writes machine-local config content inside the provided
+// test home.
+func WriteLocalConfig(t *testing.T, home, content string) string {
+	t.Helper()
+
+	path := LocalConfigPath(home)
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		t.Fatalf("create config dir: %v", err)
+	}
+	if err := os.WriteFile(path, []byte(strings.TrimLeft(content, "\n")), 0644); err != nil {
+		t.Fatalf("write local config: %v", err)
 	}
 	return path
 }

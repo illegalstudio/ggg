@@ -13,7 +13,7 @@ internal/cli/    → Cobra CLI commands (package cli) grouped as config, repo op
                  → Repo commands: clone, pull, push, stash, checkout, diff, open, browse, cd
                  → Info/diagnostics: list, status, outdated, doctor, validate
                  → Shared helpers in internal/cli/helpers.go and matcher helpers in clone.go/remove.go
-internal/config/ → Configuration loading, raw parsing, saving, default template, pull-strategy resolution
+internal/config/ → Configuration loading (shared file + machine-local override + GGG_BASE_DIR), raw parsing, saving, default and local templates, path expansion, pull-strategy resolution
 internal/repo/   → Git operations (clone, pull, push, fetch, stash, checkout, status, branch detection, ahead/behind)
 internal/testutil/ → Hermetic test helpers for HOME, config files, and git subprocesses
 internal/ui/     → Shared lipgloss styles for terminal output
@@ -60,6 +60,7 @@ tests/           → End-to-end CLI tests that build the ggg binary and exercise
 - **Bundled skill**: `skills/` is a top-level Go package rather than nested under `internal/`, so `skills/ggg/SKILL.md` stays browsable on GitHub. `skills.Install` writes it; `skills.Inspect` reports its state without writing; `skills.Verify` reports freshness (`up-to-date`, `outdated`, `modified`, `not-installed`) for `ggg skills verify`. Never duplicate `docs/` content into `SKILL.md` — point at `ggg <command> --help` instead.
 - **Destination flags**: `ggg skills install --target` and `ggg skills verify --target` are repeatable and validated against `skillTargetKeys()`. Unlike pxon, the command never prompts under `--json`; it installs every destination `--target` did not narrow. Verify never prompts even without `--json`.
 - **Stale-skill notice**: after a successful interactive command, `maybeNoticeStaleSkill` prints a stderr reminder when an installed copy disagrees with the bundle. It is skipped under `--json`, on `skills`/`completion`/`cd`/`shell-init`/`help`/`--help`/hidden commands, and when `suppress_skills_notice: true` is set in the config.
+- **Shared vs machine-local config**: `config.Load()` overlays `repositories.local.yaml` (`LoadLocal`, strict: no `repos`, no unknown keys) and `GGG_BASE_DIR` on the shared file, expands `base_dir` with `ExpandPath`, and records the origin in `Config.BaseDirSource`. Commands that rewrite the config must use `LoadRaw()` + `Save()`, which touch only the shared file, so local values never leak into it.
 - **Doctor severity**: `checkResult` has three renderings — `Warn: true` (⚠, `ui.Warning`), `OK: false` (✗), and `OK: true` (✓). Use `Warn` for actionable drift that is not a broken configuration. Build `checkResult` values with keyed literals.
 
 ## Testing
@@ -70,13 +71,13 @@ tests/           → End-to-end CLI tests that build the ggg binary and exercise
 - **Test layout**:
   - Unit/package tests stay next to the code they cover (`internal/cli/`, `internal/config/`, `internal/repo/`)
   - `tests/` is reserved for end-to-end CLI coverage against the compiled binary
-  - `internal/testutil/` contains shared hermetic test helpers and should be preferred over ad-hoc env setup in individual tests
+  - `internal/testutil/` contains shared hermetic test helpers and should be preferred over ad-hoc env setup in individual tests. `SetupHome` clears `GGG_BASE_DIR` so a developer's own override never reaches tests; set it again after `SetupHome` when a test needs it. `WriteLocalConfig` writes `repositories.local.yaml`.
 - **Test helpers**: `initTestRepo(t)` in `internal/repo/repo_test.go` creates a temporary git repo with one commit
 - **Git test caveat**: `internal/repo/` tests shell out to the real `git` binary. If the developer machine has global commit signing, hooks, or SSH-based signing enabled, `initTestRepo` can fail during `git commit`. Prefer disabling signing for the test process or neutralizing global git config when adjusting those tests.
 - **External command tests**: Browser/editor/GitHub CLI flows are covered in `tests/` using local stub executables and hermetic environment variables instead of real external apps or network calls
 - **Coverage areas**:
   - `internal/repo/`: URL parsing, path derivation, git operations (clone, branch, dirty, ahead/behind)
-  - `internal/config/`: Write, save/load roundtrip, path validation
+  - `internal/config/`: Write, save/load roundtrip, path validation, base_dir precedence and expansion, local-file validation
   - `internal/cli/`: filterRepo (exact, partial, case-insensitive), filterByGroup, findRepoIndex, URL-to-browser conversion
   - `tests/`: binary-level flows such as `init`, `shell-init`, add/remove/list, export, clone, status, outdated, pull, push, diff, stash, checkout, open, browse, doctor, import, and `cd`
   - `skills/`: digest determinism, marker handling, install statuses (`installed`, `up-to-date`, `updated`, `replaced`), `Inspect` states, and `Verify` statuses (`up-to-date`, `outdated`, `modified`, `not-installed`)
@@ -109,9 +110,11 @@ repos:
   - url: git@github.com:user/repo.git
   - url: https://github.com/org/project.git
     path: custom/path          # optional
-    group: work                # optional
+    groups: [work]             # optional, one or more groups
     pull_strategy: ff-only     # optional, overrides global
 ```
+
+Machine-local overrides live in `~/.config/ggg/repositories.local.yaml` (`base_dir`, `pull_strategy`, `aliases`, `suppress_skills_notice` only; created by `ggg init --local`). The `GGG_BASE_DIR` environment variable overrides `base_dir` from both files. `base_dir` expands `~`, `$VAR`, and `${VAR}`; an unset variable is an error.
 
 ## Build
 
