@@ -725,6 +725,113 @@ repos:
 	}
 }
 
+func TestCLIMachineLocalBaseDir(t *testing.T) {
+	home := testutil.SetupHome(t)
+
+	_, remote := createRemoteRepo(t, home)
+	writeConfig(t, home, fmt.Sprintf(`
+base_dir: ~/Developer
+repos:
+  - url: %s
+    path: team/project
+`, filepath.ToSlash(remote)))
+	sharedBefore, err := os.ReadFile(testutil.ConfigPath(home))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// --json never prompts, so it needs an explicit base directory.
+	out, err := runGGG(t, home, "init", "--local", "--json")
+	if err == nil || !strings.Contains(out, "--base-dir") {
+		t.Fatalf("ggg init --local --json should require --base-dir, got err=%v\n%s", err, out)
+	}
+
+	localBase := filepath.Join(t.TempDir(), "machine-dev")
+	if err := os.MkdirAll(localBase, 0755); err != nil {
+		t.Fatal(err)
+	}
+	out, err = runGGG(t, home, "init", "--local", "--base-dir", localBase)
+	if err != nil {
+		t.Fatalf("ggg init --local failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, "Local config file created") {
+		t.Fatalf("unexpected init --local output:\n%s", out)
+	}
+	if out, err := runGGG(t, home, "init", "--local", "--base-dir", localBase); err == nil {
+		t.Fatalf("second ggg init --local should fail:\n%s", out)
+	}
+
+	// clone and cd both resolve paths under the local base directory.
+	out, err = runGGG(t, home, "clone", "project")
+	if err != nil {
+		t.Fatalf("ggg clone failed: %v\n%s", err, out)
+	}
+	out, err = runGGG(t, home, "cd", "project")
+	if err != nil {
+		t.Fatalf("ggg cd failed: %v\n%s", err, out)
+	}
+	if want := filepath.Join(localBase, "team", "project"); strings.TrimSpace(out) != want {
+		t.Fatalf("cd output = %q, want %q", strings.TrimSpace(out), want)
+	}
+
+	out, err = runGGG(t, home, "doctor")
+	if err != nil {
+		t.Fatalf("ggg doctor failed: %v\n%s", err, out)
+	}
+	if !strings.Contains(out, testutil.LocalConfigPath(home)) || !strings.Contains(out, "from repositories.local.yaml") {
+		t.Fatalf("doctor output missing local config details:\n%s", out)
+	}
+
+	// Writing commands touch only the shared file and never copy local values.
+	out, err = runGGG(t, home, "add", "git@github.com:acme/other.git")
+	if err != nil {
+		t.Fatalf("ggg add failed: %v\n%s", err, out)
+	}
+	shared, err := os.ReadFile(testutil.ConfigPath(home))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(shared), localBase) || !strings.Contains(string(shared), "base_dir: ~/Developer") {
+		t.Fatalf("shared config changed base_dir after add:\nbefore:\n%s\nafter:\n%s", sharedBefore, shared)
+	}
+
+	// GGG_BASE_DIR beats the local file.
+	envBase := filepath.Join(t.TempDir(), "env-dev")
+	t.Setenv("GGG_BASE_DIR", envBase)
+	out, err = runGGG(t, home, "list", "--json")
+	if err != nil {
+		t.Fatalf("ggg list with GGG_BASE_DIR failed: %v\n%s", err, out)
+	}
+	var listed struct {
+		Repos []struct {
+			URL  string `json:"url"`
+			Path string `json:"path"`
+		} `json:"repos"`
+	}
+	if err := json.Unmarshal([]byte(out), &listed); err != nil {
+		t.Fatalf("list --json is not valid JSON: %v\n%s", err, out)
+	}
+	if len(listed.Repos) == 0 || listed.Repos[0].Path != filepath.Join(envBase, "team", "project") {
+		t.Fatalf("list --json with GGG_BASE_DIR = %+v, want first path under %s", listed.Repos, envBase)
+	}
+
+	// config --local opens the local file in the editor.
+	stubDir := t.TempDir()
+	logPath := filepath.Join(stubDir, "editor.log")
+	t.Setenv("EDITOR", testutil.WriteStubCommand(t, stubDir, "fake-editor", logPath, ""))
+	out, err = runGGG(t, home, "config", "--local")
+	if err != nil {
+		t.Fatalf("ggg config --local failed: %v\n%s", err, out)
+	}
+	logData, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatalf("read editor log: %v", err)
+	}
+	if !strings.Contains(string(logData), testutil.LocalConfigPath(home)) {
+		t.Fatalf("config --local did not open the local file:\n%s", logData)
+	}
+}
+
 func runGGG(t *testing.T, home string, args ...string) (string, error) {
 	t.Helper()
 

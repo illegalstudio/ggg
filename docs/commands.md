@@ -144,9 +144,18 @@ Generate a default configuration file.
 
 ```bash
 ggg init
+ggg init --base-dir ~/code
+ggg init --local --base-dir /data/dev
 ```
 
-Creates `~/.config/ggg/repositories.yaml` with a starter template. Fails if the file already exists.
+Without `--local`, creates the shared `~/.config/ggg/repositories.yaml` with a starter template. Fails if the file already exists.
+
+With `--local`, creates the machine-local override file `~/.config/ggg/repositories.local.yaml` instead, setting `base_dir` for this machine only. Use it on a machine whose clone root differs from the one in the shared config. Without `--base-dir`, the base directory is asked interactively, pre-filled with the shared value. Fails if the local file already exists. See [Machine-local overrides](configuration.md#machine-local-overrides).
+
+| Flag | Description |
+|------|-------------|
+| `--local` | Create the machine-local override file instead of the shared config. |
+| `--base-dir` | Base directory to write into the generated file. Required with `--local --json`. With `--local`, a `$VAR` it references must be set on this machine. |
 
 ---
 
@@ -274,7 +283,7 @@ ggg add git@github.com:user/new-repo.git --group work --path custom/path
 | Flag | Short | Description |
 |------|-------|-------------|
 | `--clone` | `-c` | Clone the repo immediately after adding. |
-| `--group` | `-g` | Assign the repo to a group. |
+| `--group` | `-g` | Assign the repo to a group. Repeatable for several groups. |
 | `--path` | `-p` | Custom clone path (relative to `base_dir`). |
 
 Appends the repo to `~/.config/ggg/repositories.yaml`. Fails if the URL is already configured.
@@ -329,8 +338,9 @@ Checks performed:
 | Check | Description |
 |-------|-------------|
 | Config file | Exists at expected path |
-| Config syntax | File is valid YAML and parseable |
-| Base directory | `base_dir` exists on disk |
+| Local config | Path of `repositories.local.yaml`; appears **only** when the file exists |
+| Config syntax | Shared and local files are valid YAML and parseable |
+| Base directory | Effective `base_dir` exists on disk; the message names its origin (`from GGG_BASE_DIR`, `from repositories.local.yaml`, `from repositories.yaml`, or `default`) |
 | Repositories | Count of configured repos |
 | Duplicates | Detects duplicate URLs |
 | Cloned | Count of cloned vs. missing repos |
@@ -432,7 +442,7 @@ ggg import myorg --http --group work
 | Flag | Short | Description |
 |------|-------|-------------|
 | `--http` | | Use HTTPS URLs instead of SSH. |
-| `--group` | `-g` | Assign imported repos to a group. |
+| `--group` | `-g` | Assign imported repos to a group. Repeatable for several groups. |
 
 Requires [`gh`](https://cli.github.com) to be installed. Without a repository argument, presents an interactive multi-select to choose which repos to import. Already-configured repos are skipped.
 In the repository picker, press `/` to filter, `space` to toggle a repo, and `enter` to confirm.
@@ -516,9 +526,14 @@ Open the configuration file in your default editor.
 
 ```bash
 ggg config
+ggg config --local
 ```
 
 Uses `$EDITOR`, `$VISUAL`, or `vi` as fallback.
+
+| Flag | Description |
+|------|-------------|
+| `--local` | Open the machine-local override file (`repositories.local.yaml`). Create it first with `ggg init --local`. |
 
 ---
 

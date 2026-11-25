@@ -11,7 +11,7 @@ Use the installed `ggg` executable as the source of truth for the available comm
 
 1. Run `command -v ggg` and `ggg --version` before operating it.
 2. Run `ggg <command> --help` before using flags whose behavior is unclear.
-3. GGG reads `~/.config/ggg/repositories.yaml`. If it is missing, run `ggg init` and tell the user to declare repositories before any bulk operation.
+3. GGG reads `~/.config/ggg/repositories.yaml`. If it is missing, run `ggg init` and tell the user to declare repositories before any bulk operation. That file is often synced between machines: when only the clone root differs on this machine, set it with `ggg init --local --base-dir PATH` (or `GGG_BASE_DIR`) instead of editing the shared `base_dir`. `ggg doctor` reports which source the effective base directory came from.
 4. Run `ggg doctor --json` when a command fails unexpectedly. It reports the config file, config syntax, base directory, duplicate URLs, clone status, remote reachability, and — for any AI agent skill destination that already exists — its install state. Act on those skill rows as described in item 5.
 5. Refresh this skill after upgrading GGG. `ggg skills verify` reports whether each installed copy matches the running binary and exits non-zero when one does not; ggg also prints a stderr notice after interactive commands while a copy is stale (users can silence it with `suppress_skills_notice: true` in the config). Bare `ggg skills install` opens an interactive menu and fails without a terminal, so name the destination explicitly: `ggg skills install --target claude`. `--target` is repeatable, not comma-separated. Install only to destinations the user already has — `ggg doctor` reports the ones that exist. If GGG reports locally modified skill files, do not add `--force` without the user's approval.
 
@@ -35,7 +35,7 @@ Enumerate the exact repositories a command will touch with `ggg list --json` bef
 
 ## Commands that change the configuration file
 
-`init`, `add`, `remove`, and `import` write `~/.config/ggg/repositories.yaml`. `validate` can delete duplicate entries. `export` writes a copy of the config to a path you choose.
+`init`, `add`, `remove`, and `import` write `~/.config/ggg/repositories.yaml`; `init --local` writes the machine-local `repositories.local.yaml` instead. `validate` can delete duplicate entries. `export` writes a copy of the config to a path you choose.
 
 - Show the user the entry you are about to add or remove before running the command.
 - `import` requires an authenticated `gh` CLI. With `--json` it requires an explicit account **and** repository argument and imports only that one repository; never treat JSON mode as "select all".

@@ -77,14 +77,11 @@ var validateCmd = &cobra.Command{
 		}
 
 		// Check 3: invalid pull strategies
-		validStrategies := map[config.PullStrategy]bool{
-			config.PullMerge: true, config.PullRebase: true, config.PullFFOnly: true, "": true,
-		}
-		if !validStrategies[cfgExpanded.PullStrategy] {
+		if !cfgExpanded.PullStrategy.Valid() {
 			warnings = append(warnings, fmt.Sprintf("Invalid global pull_strategy: %q", cfgExpanded.PullStrategy))
 		}
 		for _, r := range cfg.Repos {
-			if !validStrategies[r.PullStrategy] {
+			if !r.PullStrategy.Valid() {
 				warnings = append(warnings, fmt.Sprintf("Invalid pull_strategy %q for %s", r.PullStrategy, r.URL))
 			}
 		}

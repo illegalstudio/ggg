@@ -12,8 +12,13 @@ import (
 )
 
 var configCmd = &cobra.Command{
-	Use:     "config",
-	Short:   "Open the configuration file in your default editor",
+	Use:   "config",
+	Short: "Open the configuration file in your default editor",
+	Long: `Open the configuration file in your default editor.
+
+With --local, open the machine-local override file
+(~/.config/ggg/repositories.local.yaml) instead; create it first with
+ggg init --local.`,
 	GroupID: GroupConfig,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if jsonOutput {
@@ -21,9 +26,14 @@ var configCmd = &cobra.Command{
 		}
 
 		path := config.ConfigPath()
+		hint := "ggg init"
+		if local, _ := cmd.Flags().GetBool("local"); local {
+			path = config.LocalConfigPath()
+			hint = "ggg init --local"
+		}
 
 		if _, err := os.Stat(path); os.IsNotExist(err) {
-			return fmt.Errorf("config file not found at %s (run ggg init first)", path)
+			return fmt.Errorf("config file not found at %s (run %s first)", path, hint)
 		}
 
 		editor := defaultEditor()
@@ -39,5 +49,6 @@ var configCmd = &cobra.Command{
 }
 
 func init() {
+	configCmd.Flags().Bool("local", false, "Open the machine-local override file instead of the shared config")
 	rootCmd.AddCommand(configCmd)
 }
